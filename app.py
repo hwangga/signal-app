@@ -3,6 +3,7 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 import isodate
 import pandas as pd
+from youtube_transcript_api import YouTubeTranscriptApi # 자막 추출용
 
 # ==========================================
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
@@ -16,7 +17,7 @@ st.markdown("""
     /* 전체 테마 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     
-    /* 사이드바 너비 강제 확장 (700px) & 가운데 정렬 */
+    /* 사이드바 강제 확장 (700px) & 가운데 정렬 */
     section[data-testid="stSidebar"] { min-width: 700px !important; }
     [data-testid="stSidebar"] { background-color: #212529; border-right: 1px solid #333; text-align: center; }
     
@@ -31,47 +32,40 @@ st.markdown("""
     /* 썸네일 이미지 */
     img { border-radius: 6px; }
     
-    /* 메트릭(숫자) 디자인 */
+    /* 메트릭 디자인 */
     [data-testid="stMetricValue"] { font-size: 24px !important; color: #4FC3F7 !important; }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("📡 SIGNAL : YouTube Hunter")
 
-# 1. 상단 (Top) 검색창
-api_key = st.secrets.get("YOUTUBE_API_KEY", None)
+# -------------------------------------------------------------------------
+# 함수 정의 (자막 가져오기 & 그래프 데이터)
+# -------------------------------------------------------------------------
 
-with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
-    with st.form(key='search_form'):
-        # 로컬 테스트용 키 입력창 (클라우드에선 안보임)
-        if not api_key:
-            api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
+# 자막 가져오기 함수
+def get_video_transcript(video_id):
+    try:
+        # 한국어 먼저 시도하고, 없으면 영어 시도
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['ko', 'en'])
+        full_text = " ".join([t['text'] for t in transcript_list])
+        return full_text
+    except:
+        return "⚠️ 자막이 없거나 가져올 수 없는 영상입니다."
 
-        c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
-        with c1: 
-            query = st.text_input("검색어 (엔터!)", "")
-        with c2: 
-            max_results = st.selectbox("수집수", [10, 30, 50], index=1)
-        with c3: 
-            days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
-        with c4: 
-            # 국가 선택
-            country_option = st.selectbox("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], index=0)
-            region_map = {"🇰🇷 한국": "KR", "🇯🇵 일본": "JP", "🇺🇸 미국": "US", "🌏 전세계": None}
-            region_code = region_map[country_option]
-
-        c5, c6, c7 = st.columns([1, 2, 2])
-        with c5: 
-            video_duration = st.radio("길이", ["쇼츠", "롱폼", "전체"], index=0, horizontal=True)
-        with c6: 
-            filter_grade = st.multiselect("등급 필터", ["🟣 S-Tier", "🔴 A-Tier", "🟢 B-Tier", "⚪ Normal"], default=["🟣 S-Tier", "🔴 A-Tier", "🟢 B-Tier"])
-        with c7: 
-            subs_range = st.slider("구독자 범위", 0, 1000000, (0, 1000000), 1000)
-
-        search_trigger = st.form_submit_button("🚀 SIGNAL 감지 시작", type="primary", use_container_width=True)
-
-# 2. 로직
-if 'df_result' not in st.session_state: st.session_state.df_result = None
+# 떡상 그래프 데이터 생성 함수
+def create_growth_chart_data(published_at, current_views):
+    # 시작점 (업로드 날짜, 조회수 0)
+    start_date = datetime.strptime(published_at, "%Y/%m/%d")
+    # 끝점 (오늘, 현재 조회수)
+    end_date = datetime.now()
+    
+    # 데이터프레임 생성
+    chart_data = pd.DataFrame({
+        'Date': [start_date, end_date],
+        'Views': [0, current_views]
+    })
+    return chart_data
 
 def parse_duration(d):
     try:
@@ -82,6 +76,37 @@ def parse_duration(d):
         return f"{h}:{m:02}:{s:02}" if h else f"{m}:{s:02}"
     except: return d
 
+# -------------------------------------------------------------------------
+# 1. 상단 (Top) 검색창
+# -------------------------------------------------------------------------
+api_key = st.secrets.get("YOUTUBE_API_KEY", None)
+
+with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
+    with st.form(key='search_form'):
+        if not api_key:
+            api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
+
+        c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
+        with c1: query = st.text_input("검색어 (엔터!)", "")
+        with c2: max_results = st.selectbox("수집수", [10, 30, 50], index=1)
+        with c3: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
+        with c4: 
+            country_option = st.selectbox("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], index=0)
+            region_map = {"🇰🇷 한국": "KR", "🇯🇵 일본": "JP", "🇺🇸 미국": "US", "🌏 전세계": None}
+            region_code = region_map[country_option]
+
+        c5, c6, c7 = st.columns([1, 2, 2])
+        with c5: video_duration = st.radio("길이", ["쇼츠", "롱폼", "전체"], index=0, horizontal=True)
+        with c6: filter_grade = st.multiselect("등급 필터", ["🟣 S-Tier", "🔴 A-Tier", "🟢 B-Tier", "⚪ Normal"], default=["🟣 S-Tier", "🔴 A-Tier", "🟢 B-Tier"])
+        with c7: subs_range = st.slider("구독자 범위", 0, 1000000, (0, 1000000), 1000)
+
+        search_trigger = st.form_submit_button("🚀 SIGNAL 감지 시작", type="primary", use_container_width=True)
+
+# -------------------------------------------------------------------------
+# 2. 로직
+# -------------------------------------------------------------------------
+if 'df_result' not in st.session_state: st.session_state.df_result = None
+
 today = datetime.now()
 if days_filter == "1주일": published_after = (today - timedelta(days=7)).isoformat("T") + "Z"
 elif days_filter == "1개월": published_after = (today - timedelta(days=30)).isoformat("T") + "Z"
@@ -89,7 +114,6 @@ elif days_filter == "3개월": published_after = (today - timedelta(days=90)).is
 else: published_after = None
 api_duration = "short" if video_duration == "쇼츠" else ("long" if video_duration == "롱폼" else "any")
 
-# 검색 실행
 if search_trigger:
     if not query:
         st.warning("⚠️ 검색어를 입력해주세요!")
@@ -106,8 +130,7 @@ if search_trigger:
                 search_response = search_request.execute()
                 video_ids = [item['id']['videoId'] for item in search_response['items']]
 
-                if not video_ids: 
-                    st.error("신호 없음 (검색 결과 0건)")
+                if not video_ids: st.error("신호 없음 (검색 결과 0건)")
                 else:
                     video_request = youtube.videos().list(part="statistics, snippet, contentDetails", id=','.join(video_ids))
                     video_response = video_request.execute()
@@ -115,7 +138,6 @@ if search_trigger:
                     channel_ids = [item['snippet']['channelId'] for item in video_response['items']]
                     channel_request = youtube.channels().list(part="statistics", id=','.join(channel_ids))
                     channel_response = channel_request.execute()
-                    
                     subs_map = {item['id']: int(item['statistics'].get('subscriberCount', 0)) for item in channel_response['items']}
 
                     raw_data_list = []
@@ -180,10 +202,11 @@ if search_trigger:
 
                     st.session_state.df_result = pd.DataFrame(display_data)
 
-        except Exception as e: 
-            st.error(f"에러 발생: {e}")
+        except Exception as e: st.error(f"에러 발생: {e}")
 
+# -------------------------------------------------------------------------
 # 3. 화면 출력
+# -------------------------------------------------------------------------
 with st.sidebar:
     st.header("🎞️ SIGNAL PREVIEW")
     
@@ -233,18 +256,22 @@ if st.session_state.df_result is not None:
         on_select="rerun", selection_mode="single-row"
     )
 
-  # 선택 시 사이드바 업데이트 (여기를 교체하세요!)
     if selection.selection.rows:
         row = df.iloc[selection.selection.rows[0]]
         
         with preview_container:
-            # 1. ⭐ 영상 플레이어를 최상단에 배치 (썸네일 대체)
-            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
-
-            # 2. 제목 (영상 바로 아래)
+            # 1. 제목
             st.markdown(f"### {row['제목']}")
             
-            # 3. 정보창 (2단 분리)
+            # 2. 📈 떡상 그래프 (영상 위에 배치)
+            st.write("📈 **성장 속도 (떡상 각도)**")
+            chart_data = create_growth_chart_data(row['게시일'], row['raw_view'])
+            st.line_chart(chart_data, x="Date", y="Views", color="#FF0000") # 빨간색 그래프
+
+            # 3. 🎥 영상 플레이어
+            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
+            
+            # 4. 정보창
             col_info_L, col_info_R = st.columns(2)
             with col_info_L:
                 st.metric("성과도", f"{row['raw_perf']:,.0f}%")
@@ -255,9 +282,10 @@ if st.session_state.df_result is not None:
                 st.link_button("🔗 유튜브 이동", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True)
 
             st.divider()
-            # 4. 등급 뱃지
             if "S-Tier" in row['등급']: st.success("🔥 **강력 추천!** (S-Tier)")
             elif "A-Tier" in row['등급']: st.info("👍 **훌륭한 소재** (A-Tier)")
             
-            # (원래 여기 있던 썸네일과 하단 플레이어 코드는 삭제됨)
-
+            # 5. 📜 자막(스크립트) 보기 (펼치기 기능)
+            with st.expander("📜 자막(스크립트) 보기"):
+                transcript_text = get_video_transcript(row['ID'])
+                st.text_area("내용 복사해서 AI에게 요약시키세요!", transcript_text, height=300)
