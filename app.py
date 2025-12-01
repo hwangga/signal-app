@@ -120,7 +120,7 @@ st.markdown("""
     /* 영상 미리보기 */
     .video-wrapper iframe {
         width: 100%;
-        height: 500x;
+        height: 500px;
         border-radius: 10px;
     }
 
