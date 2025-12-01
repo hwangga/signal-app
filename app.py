@@ -6,7 +6,6 @@ import pandas as pd
 
 # ==========================================
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
-# (Streamlit Cloud 사용 시 st.secrets["YOUTUBE_API_KEY"]로 대체)
 # ==========================================
 
 st.set_page_config(page_title="SIGNAL - Insight", layout="wide", page_icon="📡")
@@ -23,7 +22,7 @@ CATEGORY_MAP = {
 region_map = {"🇰🇷": "KR", "🇯🇵": "JP", "🇺🇸": "US", "🌏": None}
 
 # -------------------------------------------------------------------------
-# 🌑 [스타일링]
+# 🌑 [스타일링: Red Killer Final - 유지]
 # -------------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -36,7 +35,7 @@ st.markdown("""
     button[kind="primary"], a[kind="primary"] { background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important; color: white !important; border: none !important; }
     div[data-testid="stPills"] button[aria-pressed="true"] { background-color: #00E5FF !important; color: black !important; }
     div[data-testid="stSlider"] div[data-baseweb="slider"] div { background-color: #00E5FF !important; }
-    
+
     /* 사이드바 로고 박스 */
     .sidebar-logo {
         background: linear-gradient(135deg, #1e3a8a 0%, #00c6ff 100%);
@@ -45,13 +44,10 @@ st.markdown("""
         width: 90%; margin-left: auto; margin-right: auto;
     }
     
-    /* 기타 스타일 */
+    /* 기타 스타일 (테이블, 링크 등) */
     th { background-color: #162447 !important; color: white !important; text-align: center !important; }
+    a { text-decoration: none; color: #00E5FF !important; font-weight: bold; }
     [data-testid="stMetricValue"] { font-size: 24px !important; color: #00E5FF !important; font-weight: 700 !important; }
-    
-    /* 입력창 라벨 숨김 및 간격 조정 */
-    .stTextInput label, .stSelectbox label { display: none !important; }
-    [data-testid="stForm"] { padding: 15px 20px !important; background-color: #151921; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -70,28 +66,25 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창 - [UI]
+# 1. 상단 (Top) 검색창
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
-if 'df_result' not in st.session_state: st.session_state.df_result = None
 
 with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
     with st.form(key='search_form'):
         if not api_key:
             api_key = st.text_input("API 키 입력", type="password")
 
-        # 1행: 키워드 | 검색 | 수집 | 기간 | 국가
-        c1, c2, c3, c4, c5 = st.columns([1.5, 0.5, 0.7, 0.8, 1.5], vertical_alignment="bottom")
+        c1, c2, c3, c4 = st.columns([1.5, 0.5, 0.7, 0.8], vertical_alignment="bottom")
         with c1: query = st.text_input("키워드", placeholder="키워드 입력")
         with c2: search_trigger = st.form_submit_button("🚀", type="primary", use_container_width=True)
         with c3: max_results = st.selectbox("수집", [10, 30, 50, 100], index=1)
         with c4: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
+        
+        c5, c6, c7, c8 = st.columns([1.5, 1.2, 1.8, 2], vertical_alignment="center")
         with c5: 
-            st.caption("국가 (복수선택)")
+            st.caption("국가")
             country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
-            
-        # 2행: 길이 | 등급 | 카테고리 | 구독자
-        c6, c7, c8, c9 = st.columns([1.2, 1.8, 2, 2], vertical_alignment="center")
         with c6:
             st.caption("길이")
             video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
@@ -99,17 +92,25 @@ with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
             st.caption("등급 필터")
             filter_grade = st.pills("등급", ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], default=["🚀 떡상중", "📈 급상승", "👀 주목"], selection_mode="multi", label_visibility="collapsed")
         with c8:
-            st.caption("카테고리")
-            category_name = st.selectbox("카테고리", list(CATEGORY_MAP.keys()), index=0, label_visibility="collapsed")
-        with c9:
             st.caption("구독자 범위")
             subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
 
-# -------------------------------------------------------------------------
-# 2. 로직 준비 (에러 수정 부분)
-# -------------------------------------------------------------------------
+        # 3행: 카테고리 및 연령 제한
+        c9, c10 = st.columns([2, 1])
+        with c9:
+            st.caption("카테고리")
+            category_name = st.selectbox("카테고리", list(CATEGORY_MAP.keys()), index=0, label_visibility="collapsed")
+            category_id = CATEGORY_MAP.get(category_name)
+        with c10:
+            st.caption("연령 제한")
+            age_filter = st.checkbox("성인 콘텐츠 제외", value=True, help="연령 제한 콘텐츠(ytRating)를 자동으로 제외합니다.", label_visibility="collapsed")
 
-# ⭐ [FIXED] published_after 정의 누락 에러 수정
+
+# -------------------------------------------------------------------------
+# 2. 로직
+# -------------------------------------------------------------------------
+if 'df_result' not in st.session_state: st.session_state.df_result = None
+
 today = datetime.now()
 if days_filter == "1주일": published_after = (today - timedelta(days=7)).isoformat("T") + "Z"
 elif days_filter == "1개월": published_after = (today - timedelta(days=30)).isoformat("T") + "Z"
@@ -132,42 +133,40 @@ if search_trigger:
             all_video_ids = []
             
             with st.spinner(f"📡 '{query}' 신호 분석 중..."):
-                target_countries = [region_map[c] for c in country_options if c != "🌏"] # '🌏'는 regionCode가 None이므로 제외
-                if "🌏" in country_options: target_countries.append(None) # 전체는 None으로 추가
-                
-                # 중복 검색 방지를 위해 Set 사용
-                unique_video_ids = set() 
-                
+                target_countries = [region_map[c] for c in country_options if c != "🌏"]
+                if "🌏" in country_options: target_countries.append(None)
+                if not target_countries: target_countries = [None] # 최소한 한 번은 검색
+
                 for region_code in target_countries:
-                    per_country_max = max(10, int(max_results / len(target_countries))) if target_countries else max_results
+                    per_country_max = min(50, max(10, int(max_results / len(target_countries))))
                     
                     search_request = youtube.search().list(
                         part="snippet", q=query, maxResults=per_country_max, order="viewCount", type="video", 
                         videoDuration=api_duration, publishedAfter=published_after, regionCode=region_code,
-                        videoCategoryId=CATEGORY_MAP.get(category_name)
+                        videoCategoryId=category_id
                     )
                     search_response = search_request.execute()
-                    unique_video_ids.update([item['id']['videoId'] for item in search_response['items']])
+                    all_video_ids.extend([item['id']['videoId'] for item in search_response['items']])
 
-                all_video_ids = list(unique_video_ids)
+                all_video_ids = list(set(all_video_ids))
 
                 if not all_video_ids: 
                     st.error("신호 없음 (검색 결과 0건)")
                     st.session_state.df_result = pd.DataFrame()
                 else:
-                    # 1. 비디오 상세 정보 수집
                     chunks = [all_video_ids[i:i + 50] for i in range(0, len(all_video_ids), 50)]
                     items = []
                     for chunk in chunks:
+                        # 총 영상 수, 연령 제한을 위해 part="statistics, snippet, contentDetails" 요청
                         video_request = youtube.videos().list(part="statistics, snippet, contentDetails", id=','.join(chunk))
                         video_response = video_request.execute()
                         items.extend(video_response['items'])
 
-                    # 2. 채널 정보 수집 (구독자 수, 총 영상 수)
+                    # 채널 정보 수집 (구독자 수, 총 영상 수)
                     channel_ids = list(set([item['snippet']['channelId'] for item in items]))
                     channel_chunks = [channel_ids[i:i + 50] for i in range(0, len(channel_ids), 50)]
                     subs_map = {}
-                    video_count_map = {} 
+                    video_count_map = {}
                     
                     for chunk in channel_chunks:
                         channel_request = youtube.channels().list(part="statistics", id=','.join(chunk))
@@ -176,17 +175,18 @@ if search_trigger:
                             subs_map[item['id']] = int(item['statistics'].get('subscriberCount', 0))
                             video_count_map[item['id']] = int(item['statistics'].get('videoCount', 0))
 
-                    # 3. 데이터 통합 및 처리
                     raw_data_list = []
                     for item in items:
+                        # ⭐ [필터] 연령 제한 필터링
+                        if age_filter and item['contentDetails'].get('contentRating', {}).get('ytRating') in ['ytAgeRestricted']:
+                             continue 
+
                         vid = item['id']
                         thumbs = item['snippet']['thumbnails']
                         thumb = thumbs.get('maxres', thumbs.get('standard', thumbs.get('high', thumbs.get('medium'))))['url']
                         
                         view_count = int(item['statistics'].get('viewCount', 0))
                         sub_count = subs_map.get(item['snippet']['channelId'], 0)
-                        
-                        # 성과도 계산: 조회수 / 구독자 수 * 100
                         perf = (view_count / sub_count * 100) if sub_count > 0 else 0
                         
                         if perf >= 1000: grade = "🚀 떡상중 (1000%↑)"
@@ -194,19 +194,18 @@ if search_trigger:
                         elif perf >= 100: grade = "👀 주목 (100%↑)"
                         else: grade = "💤 일반"
 
-                        # 필터링 적용 (구독자 범위)
                         if not (subs_range[0] <= sub_count <= subs_range[1]): continue
                         
-                        # 필터링 적용 (등급)
                         grade_simple = grade.split(" (")[0]
                         pass_grade = False
                         for f in filter_grade:
                             if grade_simple in f: pass_grade = True; break
                         if not pass_grade: continue
 
-                        raw_date = datetime.strptime(item['snippet']['publishedAt'][:10], "%Y-%m-%d')
+                        # ⭐ [FIX] SyntaxError 수정 완료
+                        raw_date = datetime.strptime(item['snippet']['publishedAt'][:10], "%Y-%m-%d")
                         days_diff = (datetime.now() - raw_date).days
-                        daily_velocity = view_count / days_diff if days_diff and days_diff > 0 else view_count
+                        daily_velocity = view_count / (days_diff if days_diff else 1) # 0으로 나누기 방지
                         
                         raw_data_list.append({
                             "raw_perf": perf, "raw_date": raw_date, "raw_view": view_count, "raw_sub": sub_count, 
@@ -217,7 +216,6 @@ if search_trigger:
                             "일일 속도": daily_velocity
                         })
                     
-                    # 최종 성과도/게시일 순으로 정렬
                     sorted_list = sorted(raw_data_list, key=lambda x: (x['raw_perf'], x['raw_date']), reverse=True)
                     
                     display_data = []
@@ -270,7 +268,6 @@ if st.session_state.df_result is not None:
     df = st.session_state.df_result
     st.success(f"신호 포착 완료! {len(df)}건")
     
-    # 성과도 막대 최대값 설정
     max_perf_val = df['raw_perf'].max()
     if max_perf_val == 0 or pd.isna(max_perf_val): max_perf_val = 1000
 
@@ -301,7 +298,6 @@ if st.session_state.df_result is not None:
     if selection.selection.rows:
         selected_row = df.iloc[selection.selection.rows[0]]
     elif not df.empty:
-        # 아무것도 선택하지 않았을 때 첫 번째 행을 기본값으로 사용
         selected_row = df.iloc[0]
 
     if selected_row is not None:
@@ -321,7 +317,7 @@ if st.session_state.df_result is not None:
             st.markdown("---")
             c_meta1, c_meta2 = st.columns(2)
             with c_meta1: st.caption(f"📺 채널명: {selected_row['채널명']} (총 영상 {selected_row['총 영상 수']})")
-            with c_meta2: st.caption(f"📅 게시날짜: {selected_row['게시일']}")
+            with c2: st.caption(f"📅 게시날짜: {selected_row['게시일']}")
             
             c_stat1, c_stat2 = st.columns(2)
             with c_stat1: st.metric("성과도", f"{selected_row['raw_perf']:,.0f}%")
