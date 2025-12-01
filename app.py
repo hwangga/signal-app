@@ -291,8 +291,8 @@ if search_trigger:
 # 3. 화면 출력
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # ⭐ [요청 반영] 물리적 여백 70px (로고 내리기)
-    st.markdown('<div style="height: 70px;"></div>', unsafe_allow_html=True)
+    # ⭐ [요청 반영] 물리적 여백 60px (로고 내리기)
+    st.markdown('<div style="height: 60px;"></div>', unsafe_allow_html=True)
     
     # ⭐ [요청 반영] 로고 박스 색상 복구
     st.markdown("""
@@ -377,4 +377,5 @@ if st.session_state.df_result is not None:
             if "떡상중" in selected_row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
             elif "급상승" in selected_row['등급']: st.info("👍 **급상승 (300%↑)**")
             elif "주목" in selected_row['등급']: st.warning("🟢 **주목 (100%↑)**")
+
 
