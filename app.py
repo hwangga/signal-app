@@ -52,17 +52,26 @@ st.markdown("""
     div.stSelectbox > div,
     div.stTextInput > div,
     div.stFormSubmitButton > button {
-        min-height: 38px !important;
+        min-height: 40px !important;
+    }
+    input[type="text"] {
+        min-height: 40px !important;
     }
 
-    /* Primary 버튼 스타일 */
-    button[kind="primary"], div.stButton > button, a[kind="primary"] {
+    /* 모든 기본 버튼 파란 계열로 (빨강 제거) */
+    button, 
+    button[data-testid="baseButton-primary"],
+    button[data-testid="baseButton-secondary"],
+    div.stButton > button {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
-        font-weight: bold !important;
+        font-weight: 600 !important;
     }
-    button[kind="primary"]:hover, a[kind="primary"]:hover {
+    button:hover, 
+    button[data-testid="baseButton-primary"]:hover,
+    button[data-testid="baseButton-secondary"]:hover,
+    div.stButton > button:hover {
         transform: scale(1.02) !important;
     }
 
@@ -76,21 +85,21 @@ st.markdown("""
         padding: 2px 12px !important;
     }
 
-    /* Pills 선택된 상태 */
+    /* Pills 선택된 상태 (빨강 완전 제거, 민트/시안) */
     div[data-testid="stPills"] button[aria-pressed="true"] {
         background: linear-gradient(90deg, #00E5FF, #22D3EE) !important;
         color: #020617 !important;
         font-weight: 600 !important;
         border: 1px solid #a5f3fc !important;
-        box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+        box-shadow: 0 0 8px rgba(45, 212, 191, 0.6) !important;
     }
 
-    /* 슬라이더 트랙/핸들 색상 */
-    div[data-baseweb="slider"] > div {
-        background: rgba(56, 189, 248, 0.4) !important;
+    /* 슬라이더 트랙/핸들 색상 (빨강 제거) */
+    div[data-baseweb="slider"] * {
+        background-color: rgba(56, 189, 248, 0.4) !important;
     }
     div[data-baseweb="slider"] div[role="slider"] {
-        background: #00E5FF !important;
+        background-color: #00E5FF !important;
         border: 2px solid #e0faff !important;
     }
 
@@ -217,12 +226,14 @@ with st.sidebar:
         if not api_key:
             api_key = st.text_input("API 키 입력", type="password")
 
-        c1, c2 = st.columns([3, 1])
+        # 1행: 키워드 + 버튼 (높이 맞춤)
+        c1, c2 = st.columns([4, 1])
         with c1:
             query = st.text_input("키워드", placeholder="키워드 입력")
         with c2:
-            search_trigger = st.form_submit_button("🚀", type="primary", use_container_width=True)
+            search_trigger = st.form_submit_button("🚀", use_container_width=True)
 
+        # 2행: 수집 / 기간
         c3, c4 = st.columns(2)
         with c3:
             max_results = st.selectbox("수집", [10, 30, 50, 100], index=1)
