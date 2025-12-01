@@ -16,20 +16,20 @@ st.markdown("""
     /* 전체 테마 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     
-    /* 사이드바 너비 강제 확장 (500px) */
-    section[data-testid="stSidebar"] { min-width: 500px !important; }
+    /* ⭐ 사이드바 너비 강제 확장 (700px - 아주 넓게) */
+    section[data-testid="stSidebar"] { min-width: 700px !important; }
     [data-testid="stSidebar"] { background-color: #212529; border-right: 1px solid #333; }
     
     /* 테이블 스타일 */
     th { background-color: #1E3A8A !important; color: white !important; text-align: center !important; }
-    td { vertical-align: middle !important; text-align: center !important; font-size: 16px !important; }
+    td { vertical-align: middle !important; text-align: center !important; font-size: 15px !important; }
     
     /* 링크 스타일 */
     a { text-decoration: none; color: #4FC3F7; font-weight: bold; }
     a:hover { color: #FFFF00; text-decoration: underline; }
     
     /* 썸네일 이미지 둥글게 */
-    img { border-radius: 8px; }
+    img { border-radius: 6px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,7 +92,7 @@ if search_trigger and api_key:
                 channel_response = channel_request.execute()
                 subs_map = {item['id']: int(item['statistics'].get('subscriberCount', 0)) for item in channel_response['items']}
 
-                raw_data_list = [] # 정렬 및 계산용 (숫자 형태 유지)
+                raw_data_list = []
 
                 for item in video_response['items']:
                     vid = item['id']
@@ -113,7 +113,6 @@ if search_trigger and api_key:
 
                     raw_date = datetime.strptime(item['snippet']['publishedAt'][:10], "%Y-%m-%d")
                     
-                    # ⭐ 1단계: 계산용 데이터 저장
                     raw_data_list.append({
                         "raw_perf": perf, 
                         "raw_date": raw_date,
@@ -129,10 +128,10 @@ if search_trigger and api_key:
                         "vid": vid
                     })
                 
-                # 정렬 수행 (성과도 > 최신순)
+                # 정렬 수행
                 sorted_list = sorted(raw_data_list, key=lambda x: (x['raw_perf'], x['raw_date']), reverse=True)
                 
-                # ⭐ 2단계: 화면 표시용 데이터 변환 (여기서 쉼표 강제 적용!)
+                # 화면 표시 데이터 생성
                 display_data = []
                 for i, row in enumerate(sorted_list):
                     engagement = (row['raw_comment'] / row['raw_view'] * 100) if row['raw_view'] else 0
@@ -141,12 +140,12 @@ if search_trigger and api_key:
                         "No": str(i + 1),
                         "썸네일": row['thumbnail'],
                         "채널명": row['channel'],
-                        "제목": row['title'], # 순수 텍스트 (클릭 선택용)
+                        "제목": row['title'],
                         "게시일": row['raw_date'].strftime("%Y/%m/%d"),
-                        # 👇 여기가 핵심! 숫자를 문자로 바꾸면서 쉼표 추가 (f"{숫자:,}")
                         "구독자": f"{row['raw_sub']:,}", 
                         "조회수": f"{row['raw_view']:,}",
-                        "성과도": f"{row['raw_perf']:,.0f}%",
+                        # ⭐ 성과도는 그래프를 위해 '숫자' 그대로 둡니다 (config에서 처리)
+                        "성과도": row['raw_perf'], 
                         "등급": row['grade'],
                         "길이": row['duration'],
                         "댓글": f"{row['raw_comment']:,}",
@@ -154,8 +153,8 @@ if search_trigger and api_key:
                         "참여율": f"{engagement:.2f}%",
                         "이동": f"https://www.youtube.com/watch?v={row['vid']}",
                         "ID": row['vid'],
-                        "raw_perf": row['raw_perf'], # 사이드바 표시용 원본
-                        "raw_view": row['raw_view']  # 사이드바 표시용 원본
+                        "raw_perf": row['raw_perf'], 
+                        "raw_view": row['raw_view']  
                     })
 
                 st.session_state.df_result = pd.DataFrame(display_data)
@@ -172,26 +171,25 @@ if st.session_state.df_result is not None:
     df = st.session_state.df_result
     st.success(f"신호 포착 완료! {len(df)}건")
     
-    # ⭐ [핵심] 너비 대폭 확대 (요청하신 25% 증가 반영)
     selection = st.dataframe(
         df,
         column_order=("No", "썸네일", "채널명", "제목", "게시일", "구독자", "조회수", "성과도", "등급", "길이", "댓글", "좋아요", "참여율", "이동"),
         column_config={
-            "No": st.column_config.TextColumn("No", width=60),
-            "썸네일": st.column_config.ImageColumn("썸네일", width=150), # 120 -> 150
-            "채널명": st.column_config.TextColumn("채널명", width=180), # 140 -> 180
-            "제목": st.column_config.TextColumn("제목", width=500),    # 400 -> 500
-            "게시일": st.column_config.TextColumn("게시일", width=130), # 100 -> 130
-            # 이제 숫자가 아니라 TextColumn입니다 (쉼표 강제 표시 위해)
-            "구독자": st.column_config.TextColumn("구독자", width=130),
-            "조회수": st.column_config.TextColumn("조회수", width=130),
-            "성과도": st.column_config.TextColumn("성과도", width=130),
-            "등급": st.column_config.TextColumn("등급", width=130),
-            "길이": st.column_config.TextColumn("길이", width=100),
-            "댓글": st.column_config.TextColumn("댓글", width=100),
-            "좋아요": st.column_config.TextColumn("좋아요", width=100),
-            "참여율": st.column_config.TextColumn("참여율", width=100),
-            "이동": st.column_config.LinkColumn("이동", display_text="▶", width=80),
+            "No": st.column_config.TextColumn("No", width=50),
+            "썸네일": st.column_config.ImageColumn("썸네일", width=105), # 150 -> 105 (30% 축소)
+            "채널명": st.column_config.TextColumn("채널명", width=180), # 유지
+            "제목": st.column_config.TextColumn("제목", width=500),    # 유지
+            "게시일": st.column_config.TextColumn("게시일", width=110), # 130 -> 110 (15% 축소)
+            "구독자": st.column_config.TextColumn("구독자", width=110),
+            "조회수": st.column_config.TextColumn("조회수", width=110),
+            # ⭐ 성과도: 숫자이므로 ProgressColumn 적용 가능 (그래프 부활)
+            "성과도": st.column_config.ProgressColumn("성과도", format="%.0f%%", min_value=0, max_value=1000, width=110),
+            "등급": st.column_config.TextColumn("등급", width=110),
+            "길이": st.column_config.TextColumn("길이", width=90),
+            "댓글": st.column_config.TextColumn("댓글", width=90),
+            "좋아요": st.column_config.TextColumn("좋아요", width=90),
+            "참여율": st.column_config.TextColumn("참여율", width=90),
+            "이동": st.column_config.LinkColumn("이동", display_text="▶", width=60),
             "ID": None, "raw_perf": None, "raw_view": None
         },
         hide_index=True, use_container_width=False, height=1200, 
@@ -204,9 +202,8 @@ if st.session_state.df_result is not None:
             st.image(row['썸네일'], use_container_width=True)
             st.markdown(f"### [{row['제목']}](https://www.youtube.com/watch?v={row['ID']})")
             c1, c2 = st.columns(2)
-            # 사이드바 데이터는 원본 숫자 사용
-            st.metric("성과도", f"{row['raw_perf']:.0f}%")
-            st.metric("조회수", f"{row['raw_view']:,}")
+            c1.metric("성과도", f"{row['raw_perf']:.0f}%") # 사이드바엔 숫자만
+            c2.metric("조회수", f"{row['raw_view']:,}")
             st.divider()
             if "초대박" in row['등급']: st.success("🔥 강력한 떡상 신호!")
             st.markdown(f"**채널:** {row['채널명']}")
