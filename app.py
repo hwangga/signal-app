@@ -393,19 +393,33 @@ with preview_col:
             </h4>
         """, unsafe_allow_html=True)
 
+               # --------------------------
+        # 요약 바 (수정 버전)
         # --------------------------
-        # 요약 바
-        # --------------------------
-        st.markdown(f"""
-        <div class="summary-bar">
-            📺 <b>{selected_row['채널명']}</b> · 총 {selected_row['총 영상 수']}
-            · 📅 {selected_row['게시일']}
+        channel_name = selected_row["채널명"]
+        total_videos = selected_row["총 영상 수"]
+        published = selected_row["게시일"]
+        perf = f"{selected_row['raw_perf']:,.0f}%"
+        views = f"{selected_row['raw_view']:,}"
+        engagement = f"{float(selected_row['raw_engagement']):.2f}%"
 
-            <span class="chip chip-hot">🔥 {selected_row['raw_perf']:,.0f}%</span>
-            <span class="chip chip-view">👁 {selected_row['raw_view']:,}</span>
-            <span class="chip chip-eng">💬 {float(selected_row['raw_engagement']):.2f}%</span>
+        summary_html = f"""
+        <div class="summary-bar">
+            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                <span>📺 <b>{channel_name}</b></span>
+                <span>· 총 {total_videos}</span>
+                <span>· 📅 {published}</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-left:auto;">
+                <span class="chip chip-hot">🔥 {perf}</span>
+                <span class="chip chip-view">👁 {views}</span>
+                <span class="chip chip-eng">💬 {engagement}</span>
+            </div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+
+        st.markdown(summary_html, unsafe_allow_html=True)
+
 
         # --------------------------
         # 영상 (축소)
