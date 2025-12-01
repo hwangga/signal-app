@@ -10,7 +10,7 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - YouTube Hunter", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: Red Killer V5 - Pills 색상 강제 변경 & 물리적 여백]
+# 🌑 [스타일링: Red Killer V6 - Expander & Logo Color Fix]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
@@ -36,10 +36,10 @@ st.markdown("""
     img { border-radius: 6px; }
     
     /* =================================================================
-       ⭐ [Red Killer] 민트색 강제 적용 구역
+       ⭐ [Red Killer] 빨간색 요소 박멸 (Expander 추가)
     ================================================================= */
     
-    /* (1) 버튼 (검색, 이동) */
+    /* (1) 버튼 */
     div.stButton > button, 
     a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
@@ -55,36 +55,48 @@ st.markdown("""
         color: white !important;
     }
 
-    /* (2) Pills (알약 버튼 - 길이, 국가, 등급) 선택 시 색상 */
-    /* 빨간색을 죽이고 민트색 배경 + 검은 글씨 */
+    /* (2) Pills, Slider, Checkbox */
     div[data-testid="stPills"] button[aria-pressed="true"] {
         background-color: #00E5FF !important;
-        color: black !important;
+        color: #000000 !important;
         border: 1px solid #00E5FF !important;
         font-weight: bold !important;
     }
-    /* 마우스 올렸을 때 */
-    div[data-testid="stPills"] button:hover {
-        border-color: #00E5FF !important;
-        color: #00E5FF !important;
-    }
-
-    /* (3) 슬라이더 바 색상 */
     div[data-testid="stSlider"] div[data-baseweb="slider"] div {
         background-color: #00E5FF !important;
     }
-    
+    div[role="radiogroup"] > label > div:first-child {
+        background-color: #00E5FF !important;
+        border-color: #00E5FF !important;
+    }
+
+    /* (3) ⭐ [추가] Expander (검색 옵션 박스) 빨간색 제거 */
+    .streamlit-expanderHeader {
+        color: #00E5FF !important; /* 헤더 글씨 민트색 */
+        font-weight: bold !important;
+    }
+    .streamlit-expanderContent {
+        border-color: #30475e !important;
+    }
+    /* 선택된 입력창 테두리 색상 */
+    input:focus, div[data-baseweb="select"] > div:focus-within {
+        border-color: #00E5FF !important;
+    }
+
     /* ================================================================= */
 
-    /* 6. 사이드바 로고 박스 */
+    /* 6. ⭐ [복구] 사이드바 로고 박스 디자인 (색상 진하게) */
     .sidebar-logo {
-        background: linear-gradient(90deg, #0D1117 0%, #161B22 100%);
+        background: linear-gradient(135deg, #1e3a8a 0%, #00c6ff 100%) !important;
         padding: 12px;
         border-radius: 8px;
         margin-bottom: 20px;
         text-align: center;
-        border: 1px solid #30363D;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 198, 255, 0.3);
+        width: 90%;
+        margin-left: auto;
+        margin-right: auto;
     }
     
     /* 7. 메트릭 숫자 색상 */
@@ -107,45 +119,35 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창 - [레이아웃 개선: 옵션이 잘 보이게 배치]
+# 1. 상단 (Top) 검색창
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
 with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
     with st.form(key='search_form'):
         if not api_key:
-            api_key = st.text_input("API 키 입력", type="password")
+            api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
 
-        # 1행: 키워드, 수집수, 기간 (기존 유지)
-        c1, c2, c3 = st.columns([2, 1, 1])
+        c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
         with c1: query = st.text_input("키워드", "")
         with c2: max_results = st.selectbox("수집수", [10, 30, 50, 100], index=1)
         with c3: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
-
-        st.markdown("<hr style='margin: 10px 0; border-color: #333;'>", unsafe_allow_html=True)
-
-        # 2행: 국가, 길이 (Pills 적용 - 펼쳐서 보여주기)
-        c4, c5 = st.columns(2)
         with c4: 
-            st.caption("🌍 국가 (복수선택)")
-            # ⭐ [수정] 텍스트 없이 국기 아이콘만 사용
+            st.caption("국가 (복수선택)")
             country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
+            
+        c5, c6, c7 = st.columns([1, 2, 2])
         with c5: 
-            st.caption("⏱️ 길이")
-            # ⭐ [수정] Pills 사용 (빨간색 -> 민트색 CSS 적용됨)
+            st.caption("길이")
             video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
-
-        # 3행: 등급, 구독자
-        c6, c7 = st.columns([2, 1])
         with c6: 
-            st.caption("🏆 등급 필터")
-            # ⭐ [수정] Pills 사용 (드롭다운 아님!)
+            st.caption("등급 필터")
             filter_grade = st.pills("등급", 
                                     ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
                                     default=["🚀 떡상중", "📈 급상승", "👀 주목"],
                                     selection_mode="multi", label_visibility="collapsed")
         with c7: 
-            st.caption("👤 구독자 범위")
+            st.caption("구독자 범위")
             subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -163,11 +165,10 @@ elif days_filter == "3개월": published_after = (today - timedelta(days=90)).is
 else: published_after = None
 
 api_duration = "any"
-if video_durations and len(video_durations) == 1:
+if len(video_durations) == 1:
     if "쇼츠" in video_durations: api_duration = "short"
     elif "롱폼" in video_durations: api_duration = "long"
 
-# ⭐ [수정] 국기 -> 코드 매핑 (아이콘만 있음)
 region_map = {"🇰🇷": "KR", "🇯🇵": "JP", "🇺🇸": "US", "🌏": None}
 
 if search_trigger:
@@ -290,12 +291,15 @@ if search_trigger:
 # 3. 화면 출력
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # ⭐ [요청 반영] 물리적 여백 (투명 박스) - 로고를 아래로 밈
-    st.markdown('<div style="height: 100px;"></div>', unsafe_allow_html=True)
+    # ⭐ [요청 반영] 물리적 여백 80px (로고 내리기)
+    st.markdown('<div style="height: 80px;"></div>', unsafe_allow_html=True)
     
+    # ⭐ [요청 반영] 로고 박스 색상 복구
     st.markdown("""
         <div class="sidebar-logo">
-            <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>📡 SIGNAL PREVIEW</h3>
+            <h3 style='margin:0; color: white; font-size: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);'>
+                📡 SIGNAL PREVIEW
+            </h3>
         </div>
     """, unsafe_allow_html=True)
     
