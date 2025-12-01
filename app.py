@@ -462,7 +462,7 @@ with st.sidebar:
             # 네온 스타일 제목
             st.markdown(
     f"""
-    <h3 style="
+    <h2 style="
         margin: 4px 0 10px 0;
         color: #7DF9FF;
         line-height: 1.4;
@@ -475,7 +475,7 @@ with st.sidebar:
             0 0 26px rgba(56, 189, 248, 0.7);
     ">
         {selected_row['제목']}
-    </h3>
+    </h2>
     """,
     unsafe_allow_html=True,
 )
