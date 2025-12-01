@@ -21,13 +21,12 @@ CATEGORY_MAP = {
 region_map = {"🔵한국": "KR", "🔴일본": "JP", "🟢미국": "US", "🌏전체": None}
 
 # -------------------------------------------------------------------------
-# 🌑 [스타일링: 사이드바 + 요약바 + 영상 + 필터 색상 + 모바일 대응]
+# 🌑 [스타일링]
 # -------------------------------------------------------------------------
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117; color: #FAFAFA; }
 
-    /* 메인 컨테이너 상단 패딩 살짝 줄이기 */
     .block-container {
         padding-top: 0.8rem !important;
     }
@@ -37,7 +36,7 @@ st.markdown("""
         margin-bottom: 0.8rem !important;
     }
 
-    /* 사이드바 폭 & 스타일 */
+    /* 사이드바 폭 */
     section[data-testid="stSidebar"] {
         min-width: 700px !important;
         max-width: 700px !important;
@@ -58,52 +57,52 @@ st.markdown("""
         min-height: 40px !important;
     }
 
-    /* 모든 기본 버튼 파란 계열로 (빨강 제거) */
-    button, 
+    /* 검색 버튼 스타일 (pill에는 영향 X) */
+    button[kind="primary"],
     button[data-testid="baseButton-primary"],
-    button[data-testid="baseButton-secondary"],
     div.stButton > button {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: 600 !important;
     }
-    button:hover, 
+    button[kind="primary"]:hover,
     button[data-testid="baseButton-primary"]:hover,
-    button[data-testid="baseButton-secondary"]:hover,
     div.stButton > button:hover {
         transform: scale(1.02) !important;
     }
 
-    /* Pills 기본 모양 */
+    /* Pills 기본 모양 (비선택) */
     div[data-testid="stPills"] button {
         border-radius: 999px !important;
-        border: 1px solid rgba(150, 200, 255, 0.3) !important;
-        background-color: rgba(15, 23, 42, 0.9) !important;
+        background-color: #020617 !important;
+        border: 1px solid rgba(148, 163, 184, 0.5) !important;
         color: #e5e7eb !important;
         font-size: 12px !important;
         padding: 2px 12px !important;
+        opacity: 0.6;
     }
 
-    /* Pills 선택된 상태 (빨강 완전 제거, 민트/시안) */
+    /* Pills 선택 상태 (확실히 밝게) */
     div[data-testid="stPills"] button[aria-pressed="true"] {
         background: linear-gradient(90deg, #00E5FF, #22D3EE) !important;
         color: #020617 !important;
-        font-weight: 600 !important;
-        border: 1px solid #a5f3fc !important;
-        box-shadow: 0 0 8px rgba(45, 212, 191, 0.6) !important;
+        font-weight: 700 !important;
+        border: 1px solid #22D3EE !important;
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.8) !important;
+        opacity: 1;
     }
 
-    /* 슬라이더 트랙/핸들 색상 (빨강 제거) */
-    div[data-baseweb="slider"] * {
-        background-color: rgba(56, 189, 248, 0.4) !important;
+    /* 슬라이더 색 */
+    div[data-baseweb="slider"] > div {
+        background-color: rgba(15, 23, 42, 0.9) !important;  /* 트랙 */
     }
     div[data-baseweb="slider"] div[role="slider"] {
         background-color: #00E5FF !important;
         border: 2px solid #e0faff !important;
     }
 
-    /* 검색 카드 느낌 (폼) */
+    /* 검색 카드 스타일 */
     section[data-testid="stSidebar"] form[data-testid="stForm"] {
         padding: 12px 16px 18px 16px !important;
         border-radius: 16px !important;
@@ -172,7 +171,6 @@ st.markdown("""
         border-radius: 10px;
     }
 
-    /* 모바일 대응 */
     @media (max-width: 900px) {
         section[data-testid="stSidebar"] {
             min-width: 320px !important;
@@ -191,7 +189,6 @@ st.title("📡 SIGNAL : Insight")
 # 함수 정의
 # -------------------------------------------------------------------------
 def parse_duration(d: str) -> str:
-    """ISO 8601 duration 문자열을 mm:ss 또는 hh:mm:ss로 변환."""
     try:
         dur = isodate.parse_duration(d)
         sec = int(dur.total_seconds())
@@ -215,23 +212,21 @@ api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 # ▶ 사이드바 (PREVIEW + 검색폼)
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # PREVIEW 영역 placeholder (항상 위)
     preview_container = st.container()
     st.markdown("---")
 
-    # --- 검색 폼 ---
     st.markdown("### 🔍 검색 조건")
 
     with st.form(key="search_form"):
         if not api_key:
             api_key = st.text_input("API 키 입력", type="password")
 
-        # 1행: 키워드 + 버튼 (높이 맞춤)
+        # 1행: 키워드 + 버튼
         c1, c2 = st.columns([4, 1])
         with c1:
             query = st.text_input("키워드", placeholder="키워드 입력")
         with c2:
-            search_trigger = st.form_submit_button("🚀", use_container_width=True)
+            search_trigger = st.form_submit_button("🚀", use_container_width=True, type="primary")
 
         # 2행: 수집 / 기간
         c3, c4 = st.columns(2)
@@ -277,9 +272,7 @@ with st.sidebar:
             label_visibility="collapsed",
         )
 
-    # ---------------------------------------------------------------------
-    # ▶ 검색 로직
-    # ---------------------------------------------------------------------
+    # ---------------- 검색 로직 ----------------
     now = datetime.now()
 
     if "search_trigger" in locals() and search_trigger:
@@ -291,7 +284,6 @@ with st.sidebar:
             try:
                 youtube = build("youtube", "v3", developerKey=api_key)
 
-                # 기간 필터
                 if days_filter == "1주일":
                     published_after = (now - timedelta(days=7)).isoformat("T") + "Z"
                 elif days_filter == "1개월":
@@ -308,7 +300,6 @@ with st.sidebar:
                 all_video_ids = []
 
                 with st.spinner(f"📡 '{query}' 신호 분석 중..."):
-                    # 국가별 검색
                     target_countries = [
                         region_map[c] for c in country_options if c != "🌏전체"
                     ]
@@ -346,24 +337,18 @@ with st.sidebar:
                         st.error("신호 없음 (검색 결과 0건)")
                         st.session_state.df_result = pd.DataFrame()
                     else:
-                        # 1) 비디오 상세 정보
                         video_items = []
                         chunks = [
                             all_video_ids[i: i + 50]
                             for i in range(0, len(all_video_ids), 50)
                         ]
                         for c in chunks:
-                            res = (
-                                youtube.videos()
-                                .list(
-                                    part="statistics,snippet,contentDetails",
-                                    id=",".join(c),
-                                )
-                                .execute()
-                            )
+                            res = youtube.videos().list(
+                                part="statistics,snippet,contentDetails",
+                                id=",".join(c),
+                            ).execute()
                             video_items.extend(res.get("items", []))
 
-                        # 2) 채널 정보 (50개씩)
                         channel_ids = list(
                             set([item["snippet"]["channelId"] for item in video_items])
                         )
@@ -374,17 +359,14 @@ with st.sidebar:
                             for i in range(0, len(channel_ids), 50)
                         ]
                         for cc in ch_chunks:
-                            cres = (
-                                youtube.channels()
-                                .list(part="statistics", id=",".join(cc))
-                                .execute()
-                            )
+                            cres = youtube.channels().list(
+                                part="statistics", id=",".join(cc)
+                            ).execute()
                             for ch in cres.get("items", []):
                                 stats = ch.get("statistics", {})
                                 subs_map[ch["id"]] = int(stats.get("subscriberCount", 0))
                                 video_count_map[ch["id"]] = int(stats.get("videoCount", 0))
 
-                        # 3) 지표 계산
                         lst = []
                         for item in video_items:
                             vid = item["id"]
@@ -398,7 +380,6 @@ with st.sidebar:
                             subs = subs_map.get(channel_id, 0)
                             perf = (view / subs * 100) if subs else 0
 
-                            # 등급
                             if perf >= 1000:
                                 grade = "🚀 떡상중"
                             elif perf >= 300:
@@ -411,11 +392,9 @@ with st.sidebar:
                             if not any(g in grade for g in filter_grade):
                                 continue
 
-                            # 구독자 범위 필터
                             if not (subs_range[0] <= subs <= subs_range[1]):
                                 continue
 
-                            # 날짜 & 일일 속도
                             raw_date = datetime.strptime(
                                 snippet["publishedAt"][:10], "%Y-%m-%d"
                             )
@@ -476,7 +455,6 @@ with st.sidebar:
                                     "일일 속도": f"{int(r['일일 속도']):,}회",
                                     "이동": f"https://www.youtube.com/watch?v={r['vid']}",
                                     "ID": r["vid"],
-                                    # 내부 계산용 RAW 값
                                     "raw_view": r["raw_view"],
                                     "raw_perf": r["raw_perf"],
                                     "raw_comment": r["raw_comment"],
@@ -486,15 +464,12 @@ with st.sidebar:
                             )
 
                         st.session_state.df_result = pd.DataFrame(display)
-                        # 🔥 검색이 끝나면 항상 1번(row 0)을 선택
                         st.session_state.selected_index = 0
 
             except Exception as e:
                 st.error(f"에러 발생: {e}")
 
-    # ---------------------------------------------------------------------
-    # ▶ PREVIEW 렌더링 (항상 맨 위 preview_container 안에서)
-    # ---------------------------------------------------------------------
+    # ---------------- PREVIEW 렌더링 ----------------
     with preview_container:
         df = st.session_state.df_result
         selected_row = None
@@ -509,7 +484,6 @@ with st.sidebar:
         if selected_row is None:
             st.info("테이블에서 영상을 선택하거나 검색을 실행하면 여기 미리보기가 표시됩니다.")
         else:
-            # 네온 스타일 h2 제목 (가운데 정렬)
             st.markdown(
                 f"""
                 <h2 style="
@@ -581,7 +555,6 @@ st.markdown("### 📊 전체 영상 리스트")
 if df is None or df.empty:
     st.info("검색 결과가 없습니다. 사이드바에서 검색을 실행해주세요.")
 else:
-    # 좋아요 컬럼 추가 (raw_like → 좋아요 표시용)
     if "좋아요" not in df.columns and "raw_like" in df.columns:
         df["좋아요"] = df["raw_like"].apply(lambda x: f"{int(x):,}")
 
@@ -591,7 +564,7 @@ else:
 
     selected = st.dataframe(
         df,
-        height=700,
+        height=1100,  # 🔥 50개 가까이까지 넉넉히 보이도록 높이 확대
         use_container_width=True,
         selection_mode="single-row",
         on_select="rerun",
@@ -633,7 +606,6 @@ else:
             "이동": st.column_config.LinkColumn(
                 "이동", display_text="▶", width=50
             ),
-            # 내부 RAW 컬럼 숨김
             "ID": None,
             "raw_view": None,
             "raw_perf": None,
