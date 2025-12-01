@@ -20,6 +20,9 @@ CATEGORY_MAP = {
 }
 region_map = {"🔵한국": "KR", "🔴일본": "JP", "🟢미국": "US", "🌏전체": None}
 
+# 카테고리 ID → 한글 이름 매핑
+CATEGORY_NAME_BY_ID = {v: k for k, v in CATEGORY_MAP.items() if v is not None}
+
 # -------------------------------------------------------------------------
 # 🌑 [스타일링]
 # -------------------------------------------------------------------------
@@ -189,6 +192,7 @@ st.title("📡 SIGNAL : Insight")
 # 함수 정의
 # -------------------------------------------------------------------------
 def parse_duration(d: str) -> str:
+    """ISO 8601 duration 문자열을 mm:ss 또는 hh:mm:ss로 변환."""
     try:
         dur = isodate.parse_duration(d)
         sec = int(dur.total_seconds())
@@ -380,6 +384,7 @@ with st.sidebar:
                             subs = subs_map.get(channel_id, 0)
                             perf = (view / subs * 100) if subs else 0
 
+                            # 등급
                             if perf >= 1000:
                                 grade = "🚀 떡상중"
                             elif perf >= 300:
@@ -410,6 +415,10 @@ with st.sidebar:
                                 ),
                             )["url"]
 
+                            # 🔹 카테고리 이름
+                            cat_id = snippet.get("categoryId")
+                            cat_name = CATEGORY_NAME_BY_ID.get(cat_id, "기타")
+
                             lst.append(
                                 {
                                     "raw_perf": perf,
@@ -431,6 +440,7 @@ with st.sidebar:
                                     "총 영상 수": video_count_map.get(channel_id, 0),
                                     "일일 속도": velocity,
                                     "게시일": raw_date.strftime("%Y/%m/%d"),
+                                    "category": cat_name,
                                 }
                             )
 
@@ -446,6 +456,7 @@ with st.sidebar:
                                     "썸네일": r["thumbnail"],
                                     "채널명": r["channel"],
                                     "제목": r["title"],
+                                    "카테고리": r["category"],   # 테이블용
                                     "게시일": r["게시일"],
                                     "총 영상 수": f"{r['총 영상 수']:,}개",
                                     "조회수": f"{r['raw_view']:,}",
@@ -555,6 +566,7 @@ st.markdown("### 📊 전체 영상 리스트")
 if df is None or df.empty:
     st.info("검색 결과가 없습니다. 사이드바에서 검색을 실행해주세요.")
 else:
+    # 좋아요 표시용 컬럼
     if "좋아요" not in df.columns and "raw_like" in df.columns:
         df["좋아요"] = df["raw_like"].apply(lambda x: f"{int(x):,}")
 
@@ -564,7 +576,7 @@ else:
 
     selected = st.dataframe(
         df,
-        height=1100,  # 🔥 50개 가까이까지 넉넉히 보이도록 높이 확대
+        height=1100,  # 50개 가까이까지 넉넉히 보이도록
         use_container_width=True,
         selection_mode="single-row",
         on_select="rerun",
@@ -574,6 +586,7 @@ else:
             "썸네일",
             "채널명",
             "제목",
+            "카테고리",
             "게시일",
             "총 영상 수",
             "조회수",
@@ -589,6 +602,7 @@ else:
             "썸네일": st.column_config.ImageColumn("썸네일", width=80),
             "채널명": st.column_config.TextColumn("채널명", width=140),
             "제목": st.column_config.TextColumn("제목", width=320),
+            "카테고리": st.column_config.TextColumn("카테고리", width=90),
             "게시일": st.column_config.TextColumn("게시일", width=90),
             "총 영상 수": st.column_config.TextColumn("총 영상 수", width=90),
             "조회수": st.column_config.TextColumn("조회수", width=100),
@@ -606,6 +620,7 @@ else:
             "이동": st.column_config.LinkColumn(
                 "이동", display_text="▶", width=50
             ),
+            # 내부 RAW 컬럼 숨김
             "ID": None,
             "raw_view": None,
             "raw_perf": None,
