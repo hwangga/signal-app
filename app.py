@@ -11,11 +11,22 @@ import pandas as pd
 st.set_page_config(page_title="SIGNAL - Insight", layout="wide", page_icon="📡")
 
 # -------------------------------------------------------------------------
-# ⭐ [CSS 스타일]
+# ⭐ [데이터 정의]
+# -------------------------------------------------------------------------
+CATEGORY_MAP = {
+    "전체": None, "영화/애니": "1", "자동차": "2", "음악": "10", 
+    "동물": "15", "스포츠": "17", "여행/이벤트": "19", "게임": "20", 
+    "브이로그/인물": "22", "코미디": "23", "엔터테인먼트": "24", 
+    "뉴스/정치": "25", "하우투/스타일": "26", "교육": "27", "과학/기술": "28"
+}
+region_map = {"🇰🇷": "KR", "🇯🇵": "JP", "🇺🇸": "US", "🌏": None}
+
+# -------------------------------------------------------------------------
+# 🌑 [스타일링: Red Killer Final]
 # -------------------------------------------------------------------------
 st.markdown("""
 <style>
-    /* 전체 테마 및 스타일 설정 (유지) */
+    /* 전체 테마 및 사이드바 너비 축소 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     section[data-testid="stSidebar"] { min-width: 450px !important; background-color: #1A1C24; text-align: center; }
     [data-testid="stSidebar"] .block-container { padding-top: 5rem !important; }
@@ -25,26 +36,23 @@ st.markdown("""
     div[data-testid="stPills"] button[aria-pressed="true"] { background-color: #00E5FF !important; color: black !important; }
     div[data-testid="stSlider"] div[data-baseweb="slider"] div { background-color: #00E5FF !important; }
     
-    /* 나머지 스타일은 이전 코드와 동일합니다 */
+    /* 사이드바 로고 박스 */
     .sidebar-logo {
         background: linear-gradient(135deg, #1e3a8a 0%, #00c6ff 100%);
         padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center;
         border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 4px 15px rgba(0, 198, 255, 0.3);
         width: 90%; margin-left: auto; margin-right: auto;
     }
+    
+    /* 기타 스타일 */
+    th { background-color: #162447 !important; color: white !important; text-align: center !important; }
+    [data-testid="stMetricValue"] { font-size: 24px !important; color: #00E5FF !important; font-weight: 700 !important; }
+    
+    /* 입력창 라벨 숨김 및 간격 조정 */
     .stTextInput label, .stSelectbox label { display: none !important; }
+    [data-testid="stForm"] { padding: 15px 20px !important; background-color: #151921; }
 </style>
 """, unsafe_allow_html=True)
-
-# -------------------------------------------------------------------------
-# ⭐ [데이터 정의] - 위치 수정
-# -------------------------------------------------------------------------
-# 카테고리 ID 매핑 (현재는 미사용)
-CATEGORY_MAP = {
-    "전체": None, "영화/애니": "1", "자동차": "2", "음악": "10", "여행/이벤트": "19", "게임": "20", "교육": "27", "과학/기술": "28"
-}
-# ⭐ [FIX] 국가 코드 매핑을 전역에서 실행되도록 위치 조정
-region_map = {"🇰🇷": "KR", "🇯🇵": "JP", "🇺🇸": "US", "🌏": None}
 
 st.title("📡 SIGNAL : Insight")
 
@@ -60,8 +68,10 @@ def parse_duration(d):
         return f"{h}:{m:02}:{s:02}" if h else f"{m}:{s:02}"
     except: return d
 
+# (자막 추출 함수는 현재 미사용이지만, 필요하면 여기에 다시 추가 가능합니다.)
+
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창
+# 1. 상단 (Top) 검색창 - [최종 UI]
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 if 'df_result' not in st.session_state: st.session_state.df_result = None
@@ -71,9 +81,8 @@ with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
         if not api_key:
             api_key = st.text_input("API 키 입력", type="password")
 
-        # 1행: 키워드 | 검색 | 수집 | 기간 | 국가 (Pills)
-        c1, c2, c3, c4, c5, c6 = st.columns([1.5, 0.5, 0.7, 0.8, 1.5, 1.2], vertical_alignment="bottom")
-        
+        # 1행: 키워드 | 검색 | 수집 | 기간 | 국가 (5개 요소)
+        c1, c2, c3, c4, c5 = st.columns([1.5, 0.5, 0.7, 0.8, 1.5], vertical_alignment="bottom")
         with c1: query = st.text_input("키워드", placeholder="키워드 입력")
         with c2: search_trigger = st.form_submit_button("🚀", type="primary", use_container_width=True)
         with c3: max_results = st.selectbox("수집", [10, 30, 50, 100], index=1)
@@ -82,33 +91,24 @@ with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
             st.caption("국가 (복수선택)")
             country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
             
-        # 2행: 길이 | 등급 | 구독자
-        c6, c7, c8 = st.columns([1.5, 3, 2], vertical_alignment="bottom")
+        # 2행: 길이 | 등급 | 카테고리 | 구독자
+        c6, c7, c8, c9 = st.columns([1.2, 1.8, 2, 2], vertical_alignment="center")
         with c6:
             st.caption("길이")
-            video_durations = st.pills("길이", ["шо츠", "롱폼"], default=["шо츠"], selection_mode="multi", label_visibility="collapsed")
+            video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
         with c7: 
             st.caption("등급 필터")
-            filter_grade = st.pills("등급", 
-                                    ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
-                                    default=["🚀 떡상중", "📈 급상승", "👀 주목"],
-                                    selection_mode="multi", label_visibility="collapsed")
+            filter_grade = st.pills("등급", ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], default=["🚀 떡상중", "📈 급상승", "👀 주목"], selection_mode="multi", label_visibility="collapsed")
         with c8:
+            st.caption("카테고리")
+            category_name = st.selectbox("카테고리", list(CATEGORY_MAP.keys()), index=0, label_visibility="collapsed")
+        with c9:
             st.caption("구독자 범위")
             subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
 
 # -------------------------------------------------------------------------
-# 2. 로직
+# 2. 로직 (KeyError Fix 적용)
 # -------------------------------------------------------------------------
-# (API 파라미터 및 로직은 이전 코드와 동일하며, region_map의 위치만 수정되었습니다.)
-# ... [이후 코드는 동일하게 진행됩니다.]
-
-today = datetime.now()
-if days_filter == "1주일": published_after = (today - timedelta(days=7)).isoformat("T") + "Z"
-elif days_filter == "1개월": published_after = (today - timedelta(days=30)).isoformat("T") + "Z"
-elif days_filter == "3개월": published_after = (today - timedelta(days=90)).isoformat("T") + "Z"
-else: published_after = None
-
 api_duration = "any"
 if len(video_durations) == 1:
     if "쇼츠" in video_durations: api_duration = "short"
@@ -132,7 +132,8 @@ if search_trigger:
                     
                     search_request = youtube.search().list(
                         part="snippet", q=query, maxResults=per_country_max, order="viewCount", type="video", 
-                        videoDuration=api_duration, publishedAfter=published_after, regionCode=region_code
+                        videoDuration=api_duration, publishedAfter=published_after, regionCode=region_code,
+                        videoCategoryId=CATEGORY_MAP.get(category_name) # 카테고리 필터 적용
                     )
                     search_response = search_request.execute()
                     all_video_ids.extend([item['id']['videoId'] for item in search_response['items']])
@@ -143,6 +144,7 @@ if search_trigger:
                     st.error("신호 없음 (검색 결과 0건)")
                     st.session_state.df_result = pd.DataFrame()
                 else:
+                    # 비디오 및 채널 상세 정보 수집
                     chunks = [all_video_ids[i:i + 50] for i in range(0, len(all_video_ids), 50)]
                     items = []
                     for chunk in chunks:
@@ -150,10 +152,18 @@ if search_trigger:
                         video_response = video_request.execute()
                         items.extend(video_response['items'])
 
+                    # 채널 정보 수집 및 [FIX] 초기화
                     channel_ids = list(set([item['snippet']['channelId'] for item in items]))
-                    channel_request = youtube.channels().list(part="statistics", id=','.join(channel_ids))
-                    channel_response = channel_request.execute()
-                    subs_map = {item['id']: int(item['statistics'].get('subscriberCount', 0)) for item in channel_response['items']}
+                    channel_chunks = [channel_ids[i:i + 50] for i in range(0, len(channel_ids), 50)]
+                    subs_map = {}
+                    video_count_map = {} # ⭐ [FIXED] 에러 방지 초기화
+                    
+                    for chunk in channel_chunks:
+                        channel_request = youtube.channels().list(part="statistics", id=','.join(chunk))
+                        channel_response = channel_request.execute()
+                        for item in channel_response['items']:
+                            subs_map[item['id']] = int(item['statistics'].get('subscriberCount', 0))
+                            video_count_map[item['id']] = int(item['statistics'].get('videoCount', 0))
 
                     raw_data_list = []
                     for item in items:
@@ -170,34 +180,32 @@ if search_trigger:
                         elif perf >= 100: grade = "👀 주목 (100%↑)"
                         else: grade = "💤 일반"
 
+                        # 필터링
                         if not (subs_range[0] <= sub_count <= subs_range[1]): continue
                         
                         grade_simple = grade.split(" (")[0]
                         pass_grade = False
                         for f in filter_grade:
-                            if grade_simple in f:
-                                pass_grade = True
-                                break
+                            if grade_simple in f: pass_grade = True; break
                         if not pass_grade: continue
 
                         raw_date = datetime.strptime(item['snippet']['publishedAt'][:10], "%Y-%m-%d")
-                        
-                        # ⭐ [데이터 추가] 총 영상 수 계산
-                        channel_video_count = video_count_map.get(item['snippet']['channelId'], 0)
+                        days_diff = (datetime.now() - raw_date).days
+                        daily_velocity = view_count / days_diff if days_diff else view_count
                         
                         raw_data_list.append({
                             "raw_perf": perf, "raw_date": raw_date, "raw_view": view_count, "raw_sub": sub_count, 
                             "thumbnail": thumb, "title": item['snippet']['title'], "channel": item['snippet']['channelTitle'],
                             "grade": grade, "duration": parse_duration(item['contentDetails']['duration']), "vid": vid,
-                            "총 영상 수": channel_video_count,
-                            "일일 속도": view_count / ((datetime.now() - raw_date).days if (datetime.now() - raw_date).days else 1),
+                            
+                            "총 영상 수": video_count_map.get(item['snippet']['channelId'], 0), # ⭐ [새 지표]
+                            "일일 속도": daily_velocity
                         })
                     
                     sorted_list = sorted(raw_data_list, key=lambda x: (x['raw_perf'], x['raw_date']), reverse=True)
                     
                     display_data = []
                     for i, row in enumerate(sorted_list):
-                        engagement = (row['raw_comment'] / row['raw_view'] * 100) if row['raw_view'] else 0
                         display_data.append({
                             "No": str(i + 1), "썸네일": row['thumbnail'], "채널명": row['channel'], "제목": row['title'],
                             "게시일": row['raw_date'].strftime("%Y/%m/%d"), "총 영상 수": f"{row['총 영상 수']:,}개",
@@ -297,19 +305,15 @@ if st.session_state.df_result is not None:
             with c_meta1: st.caption(f"📺 채널명: {selected_row['채널명']} (총 영상 {selected_row['총 영상 수']})")
             with c2: st.caption(f"📅 게시날짜: {selected_row['게시일']}")
             
-            # 핵심 지표
             c_stat1, c_stat2 = st.columns(2)
             with c_stat1: st.metric("성과도", f"{selected_row['raw_perf']:,.0f}%")
             with c_stat2: st.metric("조회수", f"{selected_row['raw_view']:,}")
             
-            # 액션 및 등급
+            st.markdown("<br>", unsafe_allow_html=True)
             st.link_button("🔗 유튜브에서 보기 (이동)", f"https://www.youtube.com/watch?v={vid_id}", use_container_width=True, type="primary")
 
             st.divider()
             
-            # 스크립트 추출 UI
-            with st.expander("📜 자막(스크립트) 추출 및 분석"):
-                if st.button("텍스트 가져오기", key=f"btn_{vid_id}"):
-                    with st.spinner("자막을 찾고 있습니다..."):
-                        transcript_text = get_video_transcript(vid_id)
-                        st.text_area("내용 복사해서 AI에게 요약시키세요!", transcript_text, height=300)
+            if "떡상중" in selected_row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
+            elif "급상승" in selected_row['등급']: st.info("👍 **급상승 (300%↑)**")
+            elif "주목" in selected_row['등급']: st.warning("🟢 **주목 (100%↑)**")
