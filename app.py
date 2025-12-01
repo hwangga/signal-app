@@ -10,65 +10,51 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - YouTube Hunter", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: 딥 블루 & 레드 포인트 테마]
+# 🌑 [스타일링: 다크모드 + 민트 포인트]
 st.markdown("""
 <style>
-    /* 전체 배경 */
-    .stApp { background-color: #0a0e14; color: #e6e6e6; }
-
-    /* 왼쪽 사이드바 디자인 */
-    section[data-testid="stSidebar"] {
-        width: 400px !important;
-        background: linear-gradient(180deg, #0d1b2a 0%, #1b263b 100%);
-        border-right: 1px solid #30475e;
+    /* 전체 테마 */
+    .stApp { background-color: #0E1117; color: #FAFAFA; }
+    
+    /* 사이드바 강제 확장 (700px) & 디자인 */
+    section[data-testid="stSidebar"] { min-width: 700px !important; }
+    [data-testid="stSidebar"] { 
+        background-color: #1A1C24; 
+        border-right: 1px solid #333; 
+        text-align: center; 
     }
     
-    /* 검색 버튼 (레드) */
-    div.stButton > button:first-child[kind="primary"] {
-        background: linear-gradient(90deg, #d90429 0%, #ef233c 100%);
-        color: white;
-        border: none;
-        font-weight: bold;
-        padding: 12px 24px;
-        transition: 0.3s;
-    }
-    div.stButton > button:first-child[kind="primary"]:hover {
-        transform: scale(1.02);
-        box-shadow: 0 6px 20px rgba(217, 4, 41, 0.6);
-    }
-
-    /* 프리뷰 헤더 박스 */
-    .preview-header-box {
-        background: linear-gradient(180deg, #0d1b2a 0%, #1b263b 100%);
-        padding: 15px;
-        border-radius: 12px 12px 0 0;
-        text-align: center;
-        border: 1px solid #30475e;
-        border-bottom: none;
-        margin-top: 0px;
-    }
-    /* 프리뷰 내용 박스 */
-    .preview-content-box {
-        background-color: #121a26;
-        padding: 20px;
-        border-radius: 0 0 12px 12px;
-        border: 1px solid #30475e;
-        border-top: none;
-        min-height: 500px;
-    }
-
     /* 테이블 스타일 */
-    th { background-color: #162447 !important; color: #e6e6e6 !important; text-align: center !important; }
-    td { vertical-align: middle !important; text-align: center !important; font-size: 14px !important; background-color: #0a0e14 !important; border-bottom: 1px solid #1f2a40 !important;}
+    th { background-color: #1E3A8A !important; color: white !important; text-align: center !important; }
+    td { vertical-align: middle !important; text-align: center !important; font-size: 15px !important; }
     
     /* 링크 스타일 */
-    a { text-decoration: none; color: #4cc9f0; font-weight: bold; }
+    a { text-decoration: none; color: #00E5FF; font-weight: bold; }
     a:hover { color: #FFFFFF; text-decoration: underline; }
     
-    /* 메트릭 숫자 */
-    [data-testid="stMetricValue"] { font-size: 26px !important; color: #4cc9f0 !important; font-weight: 700 !important; }
+    /* 썸네일 이미지 둥글게 */
+    img { border-radius: 6px; }
+    
+    /* 버튼 색상 (민트/시안) */
+    div.stButton > button:first-child {
+        background: linear-gradient(90deg, #00E5FF 0%, #2979FF 100%);
+        color: white; border: none; font-weight: bold; transition: 0.3s;
+    }
+    div.stButton > button:first-child:hover { transform: scale(1.02); }
+    
+    /* 사이드바 로고 박스 */
+    .sidebar-logo {
+        background: linear-gradient(90deg, #0D1117 0%, #161B22 100%);
+        padding: 15px; border-radius: 8px; margin-bottom: 10px; text-align: center;
+        border: 1px solid #30363D; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    
+    /* 메트릭 숫자 색상 */
+    [data-testid="stMetricValue"] { font-size: 28px !important; color: #00E5FF !important; font-weight: 700 !important; }
 </style>
 """, unsafe_allow_html=True)
+
+st.title("📡 SIGNAL : YouTube Hunter")
 
 # -------------------------------------------------------------------------
 # 함수 정의
@@ -83,47 +69,33 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 왼쪽 사이드바 (입력창)
+# 1. 상단 (Top) 검색창
 # -------------------------------------------------------------------------
-with st.sidebar:
-    st.title("📡 SIGNAL Hunter")
-    st.markdown("---")
-    
-    api_key = st.secrets.get("YOUTUBE_API_KEY", None)
-    if not api_key:
-        api_key = st.text_input("API 키 입력", type="password")
+api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
+with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
     with st.form(key='search_form'):
-        query = st.text_input("키워드", "")
-        st.markdown("<br>", unsafe_allow_html=True)
+        if not api_key:
+            api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
 
-        st.subheader("⚙️ 수집 설정")
-        c1, c2 = st.columns(2)
-        with c1: max_results = st.selectbox("수집수", [10, 30, 50, 100], index=1)
-        with c2: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
+        c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
+        with c1: query = st.text_input("키워드 (엔터!)", "")
+        with c2: max_results = st.selectbox("수집수", [10, 30, 50], index=1)
+        with c3: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
+        with c4: 
+            country_option = st.selectbox("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], index=0)
+            region_map = {"🇰🇷 한국": "KR", "🇯🇵 일본": "JP", "🇺🇸 미국": "US", "🌏 전세계": None}
+            region_code = region_map[country_option]
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader("🌪️ 필터 설정")
-        
-        country_option = st.selectbox("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], index=0)
-        region_map = {"🇰🇷 한국": "KR", "🇯🇵 일본": "JP", "🇺🇸 미국": "US", "🌏 전세계": None}
-        region_code = region_map[country_option]
-        
-        video_duration = st.radio("영상 길이", ["쇼츠(1분 미만)", "롱폼(1분 이상)", "전체"], index=0)
-        
-        st.markdown("---")
-        st.markdown("**🎯 등급 필터**")
-        filter_grade = st.multiselect("등급 선택", ["🟣 S-Tier (전설)", "🔴 A-Tier (초대박)", "🟢 B-Tier (우수)", "⚪ Normal (일반)"], default=["🟣 S-Tier (전설)", "🔴 A-Tier (초대박)", "🟢 B-Tier (우수)"])
-        
-        st.markdown("**👥 구독자 범위**")
-        subs_range = st.slider("범위 선택", 0, 2000000, (0, 1000000), 10000)
+        c5, c6, c7 = st.columns([1, 2, 2])
+        with c5: video_duration = st.radio("길이", ["쇼츠", "롱폼", "전체"], index=0, horizontal=True)
+        with c6: filter_grade = st.multiselect("등급 필터", ["🟣 S-Tier", "🔴 A-Tier", "🟢 B-Tier", "⚪ Normal"], default=["🟣 S-Tier", "🔴 A-Tier", "🟢 B-Tier"])
+        with c7: subs_range = st.slider("구독자 범위", 0, 1000000, (0, 1000000), 1000)
 
-        st.markdown("<br>", unsafe_allow_html=True)
         search_trigger = st.form_submit_button("🚀 SIGNAL 감지 시작", type="primary", use_container_width=True)
 
-
 # -------------------------------------------------------------------------
-# 2. 로직 처리
+# 2. 로직
 # -------------------------------------------------------------------------
 if 'df_result' not in st.session_state: st.session_state.df_result = None
 
@@ -132,10 +104,7 @@ if days_filter == "1주일": published_after = (today - timedelta(days=7)).isofo
 elif days_filter == "1개월": published_after = (today - timedelta(days=30)).isoformat("T") + "Z"
 elif days_filter == "3개월": published_after = (today - timedelta(days=90)).isoformat("T") + "Z"
 else: published_after = None
-
-if video_duration == "쇼츠(1분 미만)": api_duration = "short"
-elif video_duration == "롱폼(1분 이상)": api_duration = "long"
-else: api_duration = "any"
+api_duration = "short" if video_duration == "쇼츠" else ("long" if video_duration == "롱폼" else "any")
 
 if search_trigger:
     if not query:
@@ -146,25 +115,16 @@ if search_trigger:
         try:
             youtube = build('youtube', 'v3', developerKey=api_key)
             with st.spinner(f"📡 '{query}' 신호 분석 중..."):
-                video_ids = []
-                next_page_token = None
-                target_results = max_results
-                
-                while len(video_ids) < target_results:
-                    current_max = min(50, target_results - len(video_ids))
-                    search_request = youtube.search().list(
-                        part="snippet", q=query, maxResults=current_max, order="viewCount", type="video", 
-                        videoDuration=api_duration, publishedAfter=published_after, regionCode=region_code,
-                        pageToken=next_page_token
-                    )
-                    search_response = search_request.execute()
-                    video_ids.extend([item['id']['videoId'] for item in search_response['items']])
-                    next_page_token = search_response.get('nextPageToken')
-                    if not next_page_token or len(video_ids) >= target_results: break
+                search_request = youtube.search().list(
+                    part="snippet", q=query, maxResults=max_results, order="viewCount", type="video", 
+                    videoDuration=api_duration, publishedAfter=published_after, regionCode=region_code
+                )
+                search_response = search_request.execute()
+                video_ids = [item['id']['videoId'] for item in search_response['items']]
 
                 if not video_ids: 
                     st.error("신호 없음 (검색 결과 0건)")
-                    st.session_state.df_result = pd.DataFrame() # 빈 데이터프레임 초기화
+                    st.session_state.df_result = pd.DataFrame() # 빈 데이터프레임
                 else:
                     video_request = youtube.videos().list(part="statistics, snippet, contentDetails", id=','.join(video_ids))
                     video_response = video_request.execute()
@@ -190,11 +150,12 @@ if search_trigger:
                         else: grade = "⚪ Normal (일반)"
 
                         if not (subs_range[0] <= sub_count <= subs_range[1]): continue
-                        # 등급 필터 (문자열 포함 확인)
-                        grade_check = grade.split(" (")[0] # "🟣 S-Tier" 부분만 추출해서 비교
+                        
+                        # 등급 필터링 (안전하게 처리)
+                        grade_simple = grade.split(" (")[0] # "🟣 S-Tier"만 추출
                         pass_grade = False
                         for f in filter_grade:
-                            if grade_check in f:
+                            if grade_simple in f:
                                 pass_grade = True
                                 break
                         if not pass_grade: continue
@@ -206,6 +167,8 @@ if search_trigger:
                             "raw_date": raw_date,
                             "raw_view": view_count,
                             "raw_sub": sub_count,
+                            "raw_comment": int(item['statistics'].get('commentCount', 0)),
+                            "raw_like": int(item['statistics'].get('likeCount', 0)),
                             "thumbnail": thumb,
                             "title": item['snippet']['title'],
                             "channel": item['snippet']['channelTitle'],
@@ -218,6 +181,7 @@ if search_trigger:
                     
                     display_data = []
                     for i, row in enumerate(sorted_list):
+                        engagement = (row['raw_comment'] / row['raw_view'] * 100) if row['raw_view'] else 0
                         display_data.append({
                             "No": str(i + 1),
                             "썸네일": row['thumbnail'],
@@ -229,6 +193,9 @@ if search_trigger:
                             "성과도": row['raw_perf'],
                             "등급": row['grade'],
                             "길이": row['duration'],
+                            "댓글": f"{row['raw_comment']:,}",
+                            "좋아요": f"{row['raw_like']:,}",
+                            "참여율": f"{engagement:.2f}%",
                             "이동": f"https://www.youtube.com/watch?v={row['vid']}",
                             "ID": row['vid'],
                             "raw_perf": row['raw_perf'],
@@ -239,94 +206,89 @@ if search_trigger:
 
         except Exception as e: st.error(f"에러 발생: {e}")
 
-
-# =========================================================================
-# 3. 메인 화면 (리스트 7 : 프리뷰 3)
-# =========================================================================
-
-# 레이아웃 분할
-col_list, col_preview = st.columns([7, 3])
-
-# [왼쪽] 리스트 출력 영역
-with col_list:
-    if st.session_state.df_result is not None and not st.session_state.df_result.empty:
-        df = st.session_state.df_result
-        st.success(f"✅ 신호 포착 완료! {len(df)}건 발견")
-        
-        selection = st.dataframe(
-            df,
-            column_order=("No", "썸네일", "채널명", "제목", "게시일", "구독자", "조회수", "성과도", "등급", "길이", "이동"),
-            column_config={
-                "No": st.column_config.TextColumn("No", width=40),
-                "썸네일": st.column_config.ImageColumn("썸네일", width=80),
-                "채널명": st.column_config.TextColumn("채널명", width=120),
-                "제목": st.column_config.TextColumn("제목", width=300),
-                "게시일": st.column_config.TextColumn("게시일", width=90),
-                "구독자": st.column_config.TextColumn("구독자", width=80),
-                "조회수": st.column_config.TextColumn("조회수", width=90),
-                "성과도": st.column_config.ProgressColumn("성과도", format="%.0f%%", min_value=0, max_value=1000, width=100),
-                "등급": st.column_config.TextColumn("등급", width=120),
-                "길이": st.column_config.TextColumn("길이", width=70),
-                "이동": st.column_config.LinkColumn("이동", display_text="▶", width=60),
-                "ID": None, "raw_perf": None, "raw_view": None
-            },
-            hide_index=True, use_container_width=True, height=800, 
-            on_select="rerun", selection_mode="single-row"
-        )
-    else:
-        # 데이터가 없을 때 표시할 기본 화면
-        st.info("👈 왼쪽 사이드바에서 키워드를 입력하고 'SIGNAL 감지 시작'을 눌러주세요.")
-        selection = None
-
-# [오른쪽] 프리뷰 패널 영역
-with col_preview:
-    # 헤더
+# -------------------------------------------------------------------------
+# 3. 화면 출력 (사이드바 프리뷰 + 중앙 리스트)
+# -------------------------------------------------------------------------
+with st.sidebar:
+    # 로고
     st.markdown("""
-        <div class="preview-header-box">
-            <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>👁️ SIGNAL PREVIEW</h3>
+        <div class="sidebar-logo">
+            <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>📡 SIGNAL PREVIEW</h3>
         </div>
     """, unsafe_allow_html=True)
     
-    # 내용 컨테이너
-    st.markdown('<div class="preview-content-box">', unsafe_allow_html=True)
+    # 미리보기 컨테이너 (여기에 내용이 채워짐)
+    preview_container = st.container()
     
-    if selection and selection.selection.rows:
+    # 데이터가 있을 때만 요약 표시
+    if st.session_state.df_result is not None and not st.session_state.df_result.empty:
+        df = st.session_state.df_result
+        st.divider()
+        st.markdown("### 📊 전체 요약")
+        m1, m2 = st.columns(2)
+        m1.metric("총 조회수", f"{df['raw_view'].sum():,}")
+        m2.metric("S-Tier", f"{len(df[df['등급'].str.contains('S-Tier')])}개")
+        st.info("📌 리스트에서 영상을 선택하세요.")
+    else:
+        st.info("검색을 시작해주세요.")
+
+# 메인 리스트
+if st.session_state.df_result is not None:
+    df = st.session_state.df_result
+    st.success(f"신호 포착 완료! {len(df)}건")
+    
+    selection = st.dataframe(
+        df,
+        column_order=("No", "썸네일", "채널명", "제목", "게시일", "구독자", "조회수", "성과도", "등급", "길이", "댓글", "좋아요", "참여율", "이동"),
+        column_config={
+            "No": st.column_config.TextColumn("No", width=60),
+            "썸네일": st.column_config.ImageColumn("썸네일", width=105),
+            "채널명": st.column_config.TextColumn("채널명", width=180),
+            "제목": st.column_config.TextColumn("제목", width=500),
+            "게시일": st.column_config.TextColumn("게시일", width=110),
+            "구독자": st.column_config.TextColumn("구독자", width=110),
+            "조회수": st.column_config.TextColumn("조회수", width=110),
+            "성과도": st.column_config.ProgressColumn("성과도", format="%.0f%%", min_value=0, max_value=1000, width=110),
+            "등급": st.column_config.TextColumn("등급", width=110),
+            "길이": st.column_config.TextColumn("길이", width=90),
+            "댓글": st.column_config.TextColumn("댓글", width=90),
+            "좋아요": st.column_config.TextColumn("좋아요", width=90),
+            "참여율": st.column_config.TextColumn("참여율", width=90),
+            "이동": st.column_config.LinkColumn("이동", display_text="▶", width=60),
+            "ID": None, "raw_perf": None, "raw_view": None
+        },
+        hide_index=True, use_container_width=True, height=1200, 
+        on_select="rerun", selection_mode="single-row"
+    )
+
+    # ⭐ [핵심] 선택 시 사이드바 업데이트
+    if selection.selection.rows:
         row = df.iloc[selection.selection.rows[0]]
         
-        # 1. 영상 플레이어
-        st.video(f"https://www.youtube.com/watch?v={row['ID']}")
-        
-        # 2. 제목
-        st.markdown(f"#### {row['제목']}")
-        
-        st.markdown("---")
-        
-        # 3. 층별 정보
-        c1, c2 = st.columns(2)
-        with c1: st.caption(f"📺 {row['채널명']}")
-        with c2: st.caption(f"📅 {row['게시일']}")
-        
-        c3, c4 = st.columns(2)
-        with c3: st.metric("성과도", f"{row['raw_perf']:,.0f}%")
-        with c4: st.metric("조회수", f"{row['raw_view']:,}")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.link_button("🔗 유튜브에서 보기", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True, type="primary")
+        with preview_container:
+            # 1. 영상 플레이어
+            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
+            
+            # 2. 제목
+            st.markdown(f"#### {row['제목']}")
+            
+            st.markdown("---")
+            
+            # 3. 층별 정보
+            c_meta1, c_meta2 = st.columns(2)
+            with c_meta1: st.caption(f"📺 {row['채널명']}")
+            with c_meta2: st.caption(f"📅 {row['게시일']}")
+            
+            c_stat1, c_stat2 = st.columns(2)
+            with c_stat1: st.metric("성과도", f"{row['raw_perf']:,.0f}%")
+            with c_stat2: st.metric("조회수", f"{row['raw_view']:,}")
+            
+            # 4. 액션 버튼
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.link_button("🔗 유튜브에서 보기", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True, type="primary")
 
-        st.divider()
-        if "S-Tier" in row['등급']: st.success("🔥 **S-Tier (전설)**")
-        elif "A-Tier" in row['등급']: st.info("👍 **A-Tier (초대박)**")
-        elif "B-Tier" in row['등급']: st.warning("🟢 **B-Tier (우수)**")
-        
-    elif st.session_state.df_result is not None and not st.session_state.df_result.empty:
-        # 리스트는 있지만 선택 안 했을 때 (요약)
-        st.info("📌 리스트에서 영상을 선택하세요.")
-        total_views = st.session_state.df_result['raw_view'].sum()
-        s_count = len(st.session_state.df_result[st.session_state.df_result['등급'].str.contains("S-Tier")])
-        st.metric("총 조회수", f"{total_views:,}")
-        st.metric("S-Tier 발견", f"{s_count}개")
-        
-    else:
-        st.write("대기 중...")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+            # 5. 등급 뱃지
+            st.divider()
+            if "S-Tier" in row['등급']: st.success("🔥 **S-Tier (전설)**")
+            elif "A-Tier" in row['등급']: st.info("👍 **A-Tier (초대박)**")
+            elif "B-Tier" in row['등급']: st.warning("🟢 **B-Tier (우수)**")
