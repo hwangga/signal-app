@@ -31,7 +31,7 @@ st.markdown("""
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     
     /* 2. 사이드바 디자인 */
-    section[data-testid="stSidebar"] { min-width: 450px !important; background-color: #1A1C24; text-align: center; }
+    section[data-testid="stSidebar"] { min-width: 600px !important; background-color: #1A1C24; text-align: center; }
     [data-testid="stSidebar"] .block-container { padding-top: 5rem !important; }
 
     /* 3. ⭐ [핵심 수정] 위젯 높이 통일 및 여백 축소 */
@@ -292,8 +292,8 @@ if st.session_state.df_result is not None and not st.session_state.df_result.emp
         df,
         column_order=("No", "썸네일", "채널명", "제목", "게시일", "총 영상 수", "구독자", "조회수", "성과도", "등급", "일일 속도", "길이", "이동"),
         column_config={
-            "No": st.column_config.TextColumn("No", width=12),
-            "썸네일": st.column_config.ImageColumn("썸네일", width=98),
+            "No": st.column_config.TextColumn("No", width=8),
+            "썸네일": st.column_config.ImageColumn("썸네일", width=69),
             "채널명": st.column_config.TextColumn("채널명", width=120),
             "제목": st.column_config.TextColumn("제목", width=300),
             "게시일": st.column_config.TextColumn("게시일", width=56),
