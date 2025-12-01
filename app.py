@@ -3,7 +3,6 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 import isodate
 import pandas as pd
-from youtube_transcript_api import YouTubeTranscriptApi
 
 # ==========================================
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
@@ -11,7 +10,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 
 st.set_page_config(page_title="SIGNAL - YouTube Insight", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링]
+# 🌑 [스타일링: 다크모드 + 민트 포인트]
 st.markdown("""
 <style>
     /* 전체 테마 */
@@ -30,24 +29,45 @@ st.markdown("""
     td { vertical-align: middle !important; text-align: center !important; font-size: 15px !important; }
     
     /* 링크 스타일 */
-    a { text-decoration: none; color: #4FC3F7; font-weight: bold; }
-    a:hover { color: #FFFF00; text-decoration: underline; }
+    a { text-decoration: none; color: #00E5FF; font-weight: bold; } /* 민트색 링크 */
+    a:hover { color: #FFFFFF; text-decoration: underline; }
     
-    /* 썸네일 이미지 */
+    /* 썸네일 이미지 둥글게 */
     img { border-radius: 6px; }
     
-    /* 메트릭 디자인 */
-    [data-testid="stMetricValue"] { font-size: 24px !important; color: #4FC3F7 !important; }
-    
-    /* 사이드바 로고 박스 스타일 */
-    .sidebar-logo {
-        background: linear-gradient(90deg, #1E3A8A 0%, #000000 100%);
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        text-align: center;
-        border: 1px solid #4FC3F7;
+    /* ⭐ [핵심 1] 버튼 색상 변경 (민트/시안 그라데이션) */
+    div.stButton > button:first-child {
+        background: linear-gradient(90deg, #00E5FF 0%, #2979FF 100%);
+        color: white;
+        border: none;
+        font-weight: bold;
+        transition: 0.3s;
     }
+    div.stButton > button:first-child:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+    }
+    /* 링크 버튼(유튜브 이동)도 동일하게 적용 */
+    a[kind="primary"] {
+        background: linear-gradient(90deg, #00E5FF 0%, #2979FF 100%) !important;
+        color: white !important;
+        border: none !important;
+    }
+
+    /* ⭐ [핵심 2] 사이드바 로고 슬림하게 수정 */
+    .sidebar-logo {
+        background: linear-gradient(90deg, #0D1117 0%, #161B22 100%);
+        padding: 12px; /* 패딩 축소 (20 -> 12) */
+        border-radius: 8px;
+        margin-bottom: 10px;
+        text-align: center;
+        border: 1px solid #30363D;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    
+    /* 메트릭 숫자 색상 (민트색) */
+    [data-testid="stMetricValue"] { font-size: 28px !important; color: #00E5FF !important; font-weight: 700 !important; }
+    [data-testid="stMetricLabel"] { font-size: 14px !important; color: #AAA !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,18 +76,6 @@ st.title("📡 SIGNAL : YouTube Hunter")
 # -------------------------------------------------------------------------
 # 함수 정의
 # -------------------------------------------------------------------------
-def get_video_transcript(video_id):
-    try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        try:
-            transcript = transcript_list.find_transcript(['ko', 'en'])
-        except:
-            transcript = transcript_list.find_generated_transcript(['ko', 'en'])
-        full_text = " ".join([t['text'] for t in transcript.fetch()])
-        return full_text
-    except:
-        return "⚠️ 이 영상에는 자막(CC)이 없습니다."
-
 def parse_duration(d):
     try:
         dur = isodate.parse_duration(d)
@@ -197,8 +205,8 @@ if search_trigger:
                             "참여율": f"{engagement:.2f}%",
                             "이동": f"https://www.youtube.com/watch?v={row['vid']}",
                             "ID": row['vid'],
-                            "raw_perf": row['raw_perf'], # 분석용 원본
-                            "raw_view": row['raw_view']  # 분석용 원본
+                            "raw_perf": row['raw_perf'],
+                            "raw_view": row['raw_view']
                         })
 
                     st.session_state.df_result = pd.DataFrame(display_data)
@@ -209,15 +217,13 @@ if search_trigger:
 # 3. 화면 출력
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # 🎨 1. 사이드바 로고 (아이콘 배너 형태)
+    # 🎨 1. 사이드바 로고 (슬림 & 높이 맞춤)
     st.markdown("""
         <div class="sidebar-logo">
-            <h1 style='margin:0; font-size: 40px;'>📡</h1>
-            <h3 style='margin:0; color: white;'>SIGNAL PREVIEW</h3>
+            <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>📡 SIGNAL PREVIEW</h3>
         </div>
     """, unsafe_allow_html=True)
     
-    # 대시보드 (선택 전)
     if st.session_state.df_result is not None and not st.session_state.df_result.empty:
         df = st.session_state.df_result
         preview_container = st.container()
@@ -264,49 +270,31 @@ if st.session_state.df_result is not None:
         row = df.iloc[selection.selection.rows[0]]
         
         with preview_container:
-            # 2. 공백 및 제목
-            st.markdown("<br>", unsafe_allow_html=True) # 공백 추가
+            # 2. 제목 (여백 추가하여 영상과 분리)
             st.markdown(f"#### {row['제목']}")
+            st.markdown("<br>", unsafe_allow_html=True) # 공백 추가
             
-            # 3. 영상 플레이어 (제목 바로 아래)
+            # 3. 영상 플레이어
             st.video(f"https://www.youtube.com/watch?v={row['ID']}")
             
-            # 4. 정보창
+            # ⭐ [핵심 3] 정보창 3단 층별 정리 (깔끔한 정렬)
             st.markdown("---")
-            col_info_L, col_info_R = st.columns(2)
-            with col_info_L:
-                st.metric("성과도", f"{row['raw_perf']:,.0f}%") # 쉼표 강제 적용
-                st.metric("조회수", f"{row['raw_view']:,}")
-            with col_info_R:
-                st.caption(f"📺 {row['채널명']}")
-                st.caption(f"📅 {row['게시일']}")
-                st.link_button("🔗 유튜브 이동", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True)
+            
+            # 1층: 소속 정보 (회색톤, 작게)
+            c_meta1, c_meta2 = st.columns(2)
+            with c_meta1: st.caption(f"📺 {row['채널명']}")
+            with c_meta2: st.caption(f"📅 {row['게시일']}")
+            
+            # 2층: 성적표 (강조된 민트색 숫자)
+            c_stat1, c_stat2 = st.columns(2)
+            with c_stat1: st.metric("성과도", f"{row['raw_perf']:,.0f}%")
+            with c_stat2: st.metric("조회수", f"{row['raw_view']:,}")
+            
+            # 3층: 액션 버튼 (꽉 차게)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.link_button("🔗 유튜브에서 보기 (이동)", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True, type="primary")
 
-            # 5. 등급 표시
+            # 등급 뱃지 (맨 아래)
             st.divider()
             if "S-Tier" in row['등급']: st.success("🔥 **S-Tier (전설)**")
             elif "A-Tier" in row['등급']: st.info("👍 **A-Tier (초대박)**")
-            
-            # 6. ⭐ 성장 속도 분석 (계산 로직 복구)
-            # 날짜를 다시 파싱해서 계산 (데이터프레임 값은 문자열일 수 있으므로)
-            try:
-                pub_date = datetime.strptime(row['게시일'], "%Y/%m/%d")
-                delta_days = (datetime.now() - pub_date).days
-                if delta_days < 1: delta_days = 1
-                daily_speed = row['raw_view'] / delta_days
-                
-                st.markdown("### ⏱️ 성장 속도")
-                v1, v2 = st.columns(2)
-                v1.metric("경과 일수", f"{delta_days}일")
-                v2.metric("일일 클릭", f"{int(daily_speed):,}회") # 쉼표 적용
-            except:
-                st.write("날짜 계산 오류")
-
-            st.divider()
-            
-            # 7. 자막 기능
-            with st.expander("📜 자막(스크립트) 추출"):
-                if st.button("텍스트 가져오기", key=f"btn_{row['ID']}"):
-                    with st.spinner("분석 중..."):
-                        transcript_text = get_video_transcript(row['ID'])
-                        st.text_area("내용 복사", transcript_text, height=300)
