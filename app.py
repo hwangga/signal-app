@@ -20,7 +20,7 @@ CATEGORY_MAP = {
     "브이로그/인물": "22", "코미디": "23", "엔터테인먼트": "24", 
     "뉴스/정치": "25", "하우투/스타일": "26", "교육": "27", "과학/기술": "28"
 }
-region_map = {"🇰🇷": "KR", "🇯🇵": "JP", "🇺🇸": "US", "🌏": None}
+region_map = {"🔵한국": "KR", "🔴일본": "JP", "🟢미국": "US", "🌏전체": None}
 
 # -------------------------------------------------------------------------
 # 🌑 [스타일링: Red Killer Final + 높이 통일]
@@ -117,7 +117,7 @@ with st.form(key='search_form'):
     with c4: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
     with c5: 
         st.caption("국가")
-        country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
+        country_options = st.pills("국가", ["🔵한국", "🔴일본", "🟢미국", "🌏전체"], default=["🔵한국"], selection_mode="multi", label_visibility="collapsed")
     with c6:
         st.caption("길이")
         video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
@@ -159,8 +159,8 @@ if search_trigger:
             all_video_ids = []
             
             with st.spinner(f"📡 '{query}' 신호 분석 중..."):
-                target_countries = [region_map[c] for c in country_options if c != "🌏"]
-                if "🌏" in country_options: target_countries.append(None)
+                target_countries = [region_map[c] for c in country_options if c != "🌏전체"]
+                if "🌏전체" in country_options: target_countries.append(None)
                 if not target_countries: target_countries = [None]
                 
                 for region_code in target_countries:
