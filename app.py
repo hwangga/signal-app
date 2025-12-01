@@ -21,7 +21,7 @@ CATEGORY_MAP = {
 region_map = {"🔵한국": "KR", "🔴일본": "JP", "🟢미국": "US", "🌏전체": None}
 
 # -------------------------------------------------------------------------
-# 🌑 [스타일링: 요약바 + 상단 패딩 감소 + 모바일 대응]
+# 🌑 [스타일링: 요약바 + 상단 패딩 감소 + 영상 미리보기 + 모바일 대응]
 # -------------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -61,7 +61,7 @@ st.markdown("""
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        margin: 4px 0 10px 0;
+        margin: 4px 0 8px 0;
         border-radius: 12px;
         background: rgba(30, 41, 59, 0.8);
         border: 1px solid rgba(148, 163, 184, 0.4);
@@ -105,10 +105,18 @@ st.markdown("""
         background: rgba(59, 130, 246, 0.4);
     }
 
+    /* 영상 미리보기 */
+    .video-wrapper iframe {
+        width: 100%;
+        height: 230px;
+        border-radius: 12px;
+    }
+
     /* 모바일 대응 */
     @media (max-width: 900px) {
         .summary-bar { font-size: 11px; padding: 6px 8px; }
         .summary-right { margin-left: 0; }
+        .video-wrapper iframe { height: 200px; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -140,7 +148,7 @@ if "selected_index" not in st.session_state:
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
 # -------------------------------------------------------------------------
-# 상단 50:50 레이아웃 (좌: 요약바, 우: 검색)
+# 상단 50:50 레이아웃 (좌: 요약 + 영상, 우: 검색)
 # -------------------------------------------------------------------------
 preview_col, search_col = st.columns(2)
 
@@ -426,7 +434,7 @@ if "search_trigger" in locals() and search_trigger:
             st.error(f"에러 발생: {e}")
 
 # -------------------------------------------------------------------------
-# ▶ 왼쪽: 요약바만 표시
+# ▶ 왼쪽: 요약바 + 영상 미리보기
 # -------------------------------------------------------------------------
 with preview_col:
     df = st.session_state.df_result
@@ -437,7 +445,7 @@ with preview_col:
             selected_row = df.iloc[st.session_state.selected_index]
 
     if selected_row is None:
-        st.info("표에서 영상을 선택하면 왼쪽에 요약 정보가 표시됩니다.")
+        st.info("표에서 영상을 선택하면 왼쪽에 요약과 미리보기가 표시됩니다.")
     else:
         # 제목
         st.markdown(
@@ -474,6 +482,22 @@ with preview_col:
         </div>
         """
         st.markdown(summary_html, unsafe_allow_html=True)
+
+        # 영상 미리보기 (요약바 아래)
+        youtube_embed = f"https://www.youtube.com/embed/{selected_row['ID']}"
+        st.markdown(
+            f"""
+            <div class="video-wrapper">
+                <iframe
+                    src="{youtube_embed}"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen>
+                </iframe>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 # -------------------------------------------------------------------------
 # ▶ 테이블 (전체 리스트)
