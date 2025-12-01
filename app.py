@@ -8,10 +8,9 @@ import pandas as pd
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
 # ==========================================
 
-# ⭐ [확인] 탭 이름 변경
 st.set_page_config(page_title="SIGNAL - Insight", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: Red Killer + Slim Layout]
+# 🌑 [스타일링: 민트 테마 + 슬림 레이아웃]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
@@ -23,6 +22,9 @@ st.markdown("""
         background-color: #1A1C24; 
         border-right: 1px solid #333; 
         text-align: center; 
+    }
+    [data-testid="stSidebar"] .block-container {
+        padding-top: 5rem !important; 
     }
 
     /* 3. 테이블 스타일 */
@@ -36,32 +38,27 @@ st.markdown("""
     /* 5. 썸네일 이미지 */
     img { border-radius: 6px; }
     
-    /* =================================================================
-       ⭐ [Red Killer] 민트색 강제 적용
-    ================================================================= */
-    
-    /* 버튼 */
-    div.stButton > button, 
-    a[kind="primary"] {
+    /* 6. 버튼 및 입력창 색상 강제 변경 (민트) */
+    div.stButton > button, a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
         box-shadow: 0 4px 6px rgba(0, 198, 255, 0.3) !important;
     }
-    div.stButton > button:hover, 
-    a[kind="primary"]:hover {
+    div.stButton > button:hover, a[kind="primary"]:hover {
         transform: scale(1.02) !important;
         box-shadow: 0 6px 12px rgba(0, 198, 255, 0.5) !important;
-        color: white !important;
     }
 
-    /* Pills, Slider, Checkbox */
+    /* Pills (알약 버튼) */
     div[data-testid="stPills"] button[aria-pressed="true"] {
         background-color: #00E5FF !important;
         color: #000000 !important;
         border: 1px solid #00E5FF !important;
     }
+    
+    /* 슬라이더 */
     div[data-testid="stSlider"] div[data-baseweb="slider"] div {
         background-color: #00E5FF !important;
     }
@@ -69,11 +66,8 @@ st.markdown("""
         background-color: #00E5FF !important;
         border-color: #00E5FF !important;
     }
-    
-    /* 입력창 포커스 색상 */
-    input:focus { border-color: #00E5FF !important; }
 
-    /* 6. 사이드바 로고 박스 */
+    /* 사이드바 로고 박스 */
     .sidebar-logo {
         background: linear-gradient(135deg, #1e3a8a 0%, #00c6ff 100%);
         padding: 12px;
@@ -87,20 +81,20 @@ st.markdown("""
         margin-right: auto;
     }
     
-    /* 7. 메트릭 숫자 색상 */
+    /* 메트릭 숫자 */
     [data-testid="stMetricValue"] { font-size: 28px !important; color: #00E5FF !important; font-weight: 700 !important; }
     
-    /* ⭐ [추가] 검색창 슬림하게 만들기 위한 간격 조정 */
+    /* ⭐ 검색바 슬림화 (패딩 축소) */
     [data-testid="stForm"] {
-        padding: 15px 20px !important; /* 내부 여백 축소 */
-        border: 1px solid #30475e;
+        padding: 10px 20px !important;
         background-color: #151921;
+        border: 1px solid #30475e;
     }
-    .st-emotion-cache-16idsys p { margin-bottom: 0px; font-size: 12px; color: #aaa; } /* 캡션 간격 축소 */
+    /* 캡션 글씨 크기 축소 */
+    .st-emotion-cache-16idsys p { font-size: 11px !important; margin-bottom: 0px !important; color: #888; }
 </style>
 """, unsafe_allow_html=True)
 
-# ⭐ [확인] 메인 타이틀 변경
 st.title("📡 SIGNAL : Insight")
 
 # -------------------------------------------------------------------------
@@ -116,41 +110,44 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창 - [슬림 레이아웃 적용]
+# 1. 상단 (Top) 검색창 - [초고밀도 슬림 레이아웃]
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
-# Expander 제거하고 바로 Form 시작
 with st.form(key='search_form'):
     if not api_key:
         api_key = st.text_input("API 키 입력", type="password")
 
-    # ⭐ [1행] 키워드(80%) + 검색버튼(20%)
-    c_top1, c_top2 = st.columns([5, 1], vertical_alignment="bottom")
-    with c_top1:
-        query = st.text_input("키워드 입력", "")
-    with c_top2:
-        search_trigger = st.form_submit_button("🚀 검색", type="primary", use_container_width=True)
-
-    # ⭐ [2행] 필터 옵션들을 한 줄로 쫙 (공간 절약)
-    c1, c2, c3, c4, c5 = st.columns([1, 1, 1.5, 1.5, 2])
+    # ⭐ [1행] 키워드(짧게) + 검색버튼 + 수집수 + 기간 + 국가 (한 줄에 다 넣기)
+    c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 2.5], vertical_alignment="bottom")
     
     with c1: 
-        max_results = st.selectbox("수집수", [10, 30, 50, 100], index=1)
+        query = st.text_input("키워드", "")
     with c2: 
-        days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
+        search_trigger = st.form_submit_button("🚀 검색", type="primary", use_container_width=True)
     with c3: 
-        country_options = st.multiselect("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], default=["🇰🇷 한국"])
+        max_results = st.selectbox("수집", [10, 30, 50, 100], index=1)
     with c4: 
-        video_durations = st.multiselect("길이", ["쇼츠", "롱폼"], default=["쇼츠"])
-    with c5:
-        subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000)
+        days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
+    with c5: 
+        # 국가 (Pills)
+        country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
 
-    # 등급 필터는 공간상 바로 아래 얇게 배치
-    filter_grade = st.pills("등급 필터", 
-                            ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
-                            default=["🚀 떡상중", "📈 급상승", "👀 주목"],
-                            selection_mode="multi")
+    # ⭐ [2행] 길이 + 등급 + 구독자 (나머지 필터)
+    c6, c7, c8 = st.columns([1.5, 3, 2], vertical_alignment="bottom")
+    
+    with c6:
+        # 길이 (Pills)
+        video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="visible")
+    with c7:
+        # 등급 (Pills - 1줄로 만들기)
+        filter_grade = st.pills("등급", 
+                                ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
+                                default=["🚀 떡상중", "📈 급상승", "👀 주목"],
+                                selection_mode="multi", label_visibility="visible")
+    with c8:
+        st.caption("구독자 범위")
+        subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
 
 # -------------------------------------------------------------------------
 # 2. 로직
@@ -164,11 +161,11 @@ elif days_filter == "3개월": published_after = (today - timedelta(days=90)).is
 else: published_after = None
 
 api_duration = "any"
-if len(video_durations) == 1:
+if video_durations and len(video_durations) == 1:
     if "쇼츠" in video_durations: api_duration = "short"
     elif "롱폼" in video_durations: api_duration = "long"
 
-region_map = {"🇰🇷 한국": "KR", "🇯🇵 일본": "JP", "🇺🇸 미국": "US", "🌏 전세계": None}
+region_map = {"🇰🇷": "KR", "🇯🇵": "JP", "🇺🇸": "US", "🌏": None}
 
 if search_trigger:
     if not query:
@@ -291,12 +288,9 @@ if search_trigger:
 # -------------------------------------------------------------------------
 with st.sidebar:
     st.markdown('<div style="height: 60px;"></div>', unsafe_allow_html=True)
-    
     st.markdown("""
         <div class="sidebar-logo">
-            <h3 style='margin:0; color: white; font-size: 20px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.7);'>
-                📡 SIGNAL PREVIEW
-            </h3>
+            <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>📡 SIGNAL PREVIEW</h3>
         </div>
     """, unsafe_allow_html=True)
     
@@ -344,6 +338,7 @@ if st.session_state.df_result is not None:
         on_select="rerun", selection_mode="single-row"
     )
 
+    # 1번 자동 선택
     selected_row = None
     if selection.selection.rows:
         selected_row = df.iloc[selection.selection.rows[0]]
@@ -352,13 +347,12 @@ if st.session_state.df_result is not None:
 
     if selected_row is not None:
         with preview_container:
-            st.markdown(f"""
-                <div style='padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;'>
-                    <h4 style='margin:0; color: #00E5FF; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); line-height: 1.4; font-size: 18px;'>
-                        {selected_row['제목']}
-                    </h4>
-                </div>
-            """, unsafe_allow_html=True)
+            # ⭐ [요청 반영] 자동 선택 표시 메시지 추가
+            if not selection.selection.rows:
+                st.caption("✅ No.1 영상이 자동 선택되었습니다.")
+                
+            st.markdown(f"#### {selected_row['제목']}")
+            st.markdown("<br>", unsafe_allow_html=True)
             
             st.video(f"https://www.youtube.com/watch?v={selected_row['ID']}")
             
