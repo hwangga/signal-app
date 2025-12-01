@@ -10,7 +10,7 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - Insight", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: 민트 테마 + 슬림 레이아웃]
+# 🌑 [스타일링: 민트 테마 + 슬림 레이아웃 + 네온 효과]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
@@ -86,11 +86,10 @@ st.markdown("""
     
     /* ⭐ 검색바 슬림화 (패딩 축소) */
     [data-testid="stForm"] {
-        padding: 10px 20px !important;
+        padding: 10px 15px !important;
         background-color: #151921;
         border: 1px solid #30475e;
     }
-    /* 캡션 글씨 크기 축소 */
     .st-emotion-cache-16idsys p { font-size: 11px !important; margin-bottom: 0px !important; color: #888; }
 </style>
 """, unsafe_allow_html=True)
@@ -110,7 +109,7 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창 - [초고밀도 슬림 레이아웃]
+# 1. 상단 (Top) 검색창 - [초압축 1줄 레이아웃 도전]
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
@@ -118,8 +117,9 @@ with st.form(key='search_form'):
     if not api_key:
         api_key = st.text_input("API 키 입력", type="password")
 
-    # ⭐ [1행] 키워드(짧게) + 검색버튼 + 수집수 + 기간 + 국가 (한 줄에 다 넣기)
-    c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 2.5], vertical_alignment="bottom")
+    # ⭐ [1행] 키워드(작게) + 검색버튼 + 수집 + 기간 + 국가 + 길이 (최대한 한 줄에)
+    # 비율: 키워드 1.5, 버튼 0.8, 수집 0.8, 기간 1, 국가 2, 길이 1.5
+    c1, c2, c3, c4, c5, c6 = st.columns([1.5, 0.8, 0.8, 1, 2, 1.5], vertical_alignment="bottom")
     
     with c1: 
         query = st.text_input("키워드", "")
@@ -132,19 +132,18 @@ with st.form(key='search_form'):
     with c5: 
         # 국가 (Pills)
         country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
-
-    # ⭐ [2행] 길이 + 등급 + 구독자 (나머지 필터)
-    c6, c7, c8 = st.columns([1.5, 3, 2], vertical_alignment="bottom")
-    
     with c6:
         # 길이 (Pills)
-        video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="visible")
+        video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
+
+    # ⭐ [2행] 등급 + 구독자 (나머지)
+    c7, c8 = st.columns([4, 2], vertical_alignment="bottom")
     with c7:
-        # 등급 (Pills - 1줄로 만들기)
-        filter_grade = st.pills("등급", 
+        # 등급 (Pills)
+        filter_grade = st.pills("등급 필터", 
                                 ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
                                 default=["🚀 떡상중", "📈 급상승", "👀 주목"],
-                                selection_mode="multi", label_visibility="visible")
+                                selection_mode="multi", label_visibility="collapsed")
     with c8:
         st.caption("구독자 범위")
         subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
@@ -161,7 +160,7 @@ elif days_filter == "3개월": published_after = (today - timedelta(days=90)).is
 else: published_after = None
 
 api_duration = "any"
-if video_durations and len(video_durations) == 1:
+if len(video_durations) == 1:
     if "쇼츠" in video_durations: api_duration = "short"
     elif "롱폼" in video_durations: api_duration = "long"
 
@@ -290,7 +289,9 @@ with st.sidebar:
     st.markdown('<div style="height: 60px;"></div>', unsafe_allow_html=True)
     st.markdown("""
         <div class="sidebar-logo">
-            <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>📡 SIGNAL PREVIEW</h3>
+            <h3 style='margin:0; color: white; font-size: 20px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.7);'>
+                📡 SIGNAL PREVIEW
+            </h3>
         </div>
     """, unsafe_allow_html=True)
     
@@ -338,7 +339,7 @@ if st.session_state.df_result is not None:
         on_select="rerun", selection_mode="single-row"
     )
 
-    # 1번 자동 선택
+    # 1번 자동 선택 로직
     selected_row = None
     if selection.selection.rows:
         selected_row = df.iloc[selection.selection.rows[0]]
@@ -347,12 +348,18 @@ if st.session_state.df_result is not None:
 
     if selected_row is not None:
         with preview_container:
-            # ⭐ [요청 반영] 자동 선택 표시 메시지 추가
+            # ⭐ [자동 선택됨] 메시지 추가 (선택 안 했을 때만)
             if not selection.selection.rows:
-                st.caption("✅ No.1 영상이 자동 선택되었습니다.")
-                
-            st.markdown(f"#### {selected_row['제목']}")
-            st.markdown("<br>", unsafe_allow_html=True)
+                st.caption("✅ No.1 영상 자동 선택됨")
+
+            # ⭐ [네온 타이틀] 부활!
+            st.markdown(f"""
+                <div style='padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;'>
+                    <h4 style='margin:0; color: #00E5FF; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); line-height: 1.4; font-size: 18px;'>
+                        {selected_row['제목']}
+                    </h4>
+                </div>
+            """, unsafe_allow_html=True)
             
             st.video(f"https://www.youtube.com/watch?v={selected_row['ID']}")
             
