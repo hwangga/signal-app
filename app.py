@@ -10,7 +10,7 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - YouTube Hunter", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: Red Killer V4 - 강제 적용 모드]
+# 🌑 [스타일링: Red Killer Final + 국기 + 디자인 복구]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
@@ -28,7 +28,7 @@ st.markdown("""
     th { background-color: #162447 !important; color: white !important; text-align: center !important; }
     td { vertical-align: middle !important; text-align: center !important; font-size: 15px !important; }
     
-    /* 4. 기본 링크 스타일 */
+    /* 4. 기본 링크 스타일 (텍스트 링크) */
     a { text-decoration: none; color: #00E5FF; font-weight: bold; }
     a:hover { color: #FFFFFF; text-decoration: underline; }
     
@@ -36,34 +36,40 @@ st.markdown("""
     img { border-radius: 6px; }
     
     /* =================================================================
-       ⭐ [Red Killer] 버튼 색상 강제 변경 (대상: 일반버튼 + 링크버튼)
+       ⭐ [Red Killer Final] 링크 버튼까지 완벽하게 민트색 적용
     ================================================================= */
     
-    /* 검색 버튼 & 유튜브 이동 버튼 (모든 Primary 속성 타겟) */
+    /* (1) 일반 버튼 & 링크 버튼 공통 적용 */
     div.stButton > button, 
-    a[data-testid="stLinkButton"], 
-    button[kind="primary"] {
+    a[data-testid="stLinkButton"],
+    a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
         box-shadow: 0 4px 6px rgba(0, 198, 255, 0.3) !important;
-    }
-    
-    /* 호버 효과 */
-    div.stButton > button:hover, 
-    a[data-testid="stLinkButton"]:hover, 
-    button[kind="primary"]:hover {
-        transform: scale(1.02) !important;
-        box-shadow: 0 6px 12px rgba(0, 198, 255, 0.5) !important;
-        color: white !important;
         text-decoration: none !important; /* 링크 밑줄 제거 */
+        display: inline-flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 8px !important;
     }
     
-    /* 클릭 시 테두리 색상 (포커스) */
-    div.stButton > button:focus:not(:active), 
-    a[data-testid="stLinkButton"]:focus:not(:active) {
-        border-color: #00E5FF !important;
+    /* (2) 호버 효과 (마우스 올렸을 때) */
+    div.stButton > button:hover, 
+    a[data-testid="stLinkButton"]:hover,
+    a[kind="primary"]:hover {
+        transform: scale(1.02) !important;
+        box-shadow: 0 6px 12px rgba(0, 198, 255, 0.6) !important;
+        color: white !important;
+    }
+    
+    /* (3) 클릭/포커스 시 테두리 처리 */
+    div.stButton > button:focus, 
+    a[data-testid="stLinkButton"]:focus {
+        outline: none !important;
+        border: 1px solid #00E5FF !important;
         color: white !important;
     }
 
@@ -83,16 +89,16 @@ st.markdown("""
         border-color: #00E5FF !important;
     }
 
-    /* 7. 사이드바 로고 박스 (가운데 정렬 보정) */
+    /* 7. 사이드바 로고 박스 (색상 복구 & 위치 조정) */
     .sidebar-logo {
-        background: linear-gradient(90deg, #0D1117 0%, #161B22 100%);
+        background: linear-gradient(135deg, #1e3a8a 0%, #00c6ff 100%) !important; /* 색상 강제 적용 */
         padding: 15px;
         border-radius: 12px;
-        margin: 0 auto 20px auto; /* 가로 중앙 정렬 */
+        margin: 0 auto 20px auto;
         text-align: center;
-        border: 1px solid #30363D;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        width: 90%; /* 너비 조절 */
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 198, 255, 0.3);
+        width: 90%;
     }
     
     /* 8. 메트릭 숫자 색상 */
@@ -129,8 +135,9 @@ with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
         with c2: max_results = st.selectbox("수집수", [10, 30, 50, 100], index=1)
         with c3: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
         with c4: 
+            # ⭐ 국가: 국기 아이콘만 표시
             st.caption("국가 (복수선택)")
-            country_options = st.pills("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], default=["🇰🇷 한국"], selection_mode="multi", label_visibility="collapsed")
+            country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
             
         c5, c6, c7 = st.columns([1, 2, 2])
         with c5: 
@@ -165,7 +172,8 @@ if len(video_durations) == 1:
     if "쇼츠" in video_durations: api_duration = "short"
     elif "롱폼" in video_durations: api_duration = "long"
 
-region_map = {"🇰🇷 한국": "KR", "🇯🇵 일본": "JP", "🇺🇸 미국": "US", "🌏 전세계": None}
+# ⭐ 국기 -> 코드 매핑
+region_map = {"🇰🇷": "KR", "🇯🇵": "JP", "🇺🇸": "US", "🌏": None}
 
 if search_trigger:
     if not query:
@@ -287,9 +295,10 @@ if search_trigger:
 # 3. 화면 출력
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # ⭐ [물리적 여백 추가] 이 투명 박스가 로고를 아래로 밉니다
-    st.markdown('<div style="height: 50px;"></div>', unsafe_allow_html=True)
+    # ⭐ 상단 공간 확보 (물리적)
+    st.markdown('<div style="height: 60px;"></div>', unsafe_allow_html=True)
     
+    # 로고 박스
     st.markdown("""
         <div class="sidebar-logo">
             <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>📡 SIGNAL PREVIEW</h3>
@@ -349,9 +358,11 @@ if st.session_state.df_result is not None:
 
     if selected_row is not None:
         with preview_container:
+            # ⭐ 이름 변경: PREVIEW
+            st.markdown(f"#### PREVIEW")
             st.video(f"https://www.youtube.com/watch?v={selected_row['ID']}")
-            st.markdown(f"#### {selected_row['제목']}")
             
+            st.markdown(f"**{selected_row['제목']}**")
             st.markdown("---")
             c_meta1, c_meta2 = st.columns(2)
             with c_meta1: st.caption(f"📺 채널명: {selected_row['채널명']}")
@@ -362,8 +373,7 @@ if st.session_state.df_result is not None:
             with c_stat2: st.metric("조회수", f"{selected_row['raw_view']:,}")
             
             st.markdown("<br>", unsafe_allow_html=True)
-            # ⭐ [여기!] 링크 버튼(빨간색)을 CSS로 잡기 위해 id 부여 안 해도 되지만, 
-            # 위쪽 CSS에서 a[data-testid="stLinkButton"]로 잡았으니 무조건 민트색 나옵니다.
+            # 버튼 CSS 적용됨
             st.link_button("🔗 유튜브에서 보기 (이동)", f"https://www.youtube.com/watch?v={selected_row['ID']}", use_container_width=True, type="primary")
 
             st.divider()
