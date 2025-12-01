@@ -85,14 +85,17 @@ st.markdown("""
 
     /* ================================================================= */
 
-    /* 6. ⭐ [복구] 사이드바 로고 박스 디자인 (색상 진하게) */
+   /* 사이드바 로고 박스 */
     .sidebar-logo {
         background: linear-gradient(135deg, #1e3a8a 0%, #00c6ff 100%) !important;
         padding: 12px;
         border-radius: 8px;
         margin-bottom: 20px;
         text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        
+        /* 👇 [여기!] 이 줄을 찾아서 아래처럼 바꾸세요 */
+        border: 2px solid #00E5FF !important;  /* 민트색 진한 테두리 */
+        
         box-shadow: 0 4px 15px rgba(0, 198, 255, 0.3);
         width: 90%;
         margin-left: auto;
@@ -377,5 +380,6 @@ if st.session_state.df_result is not None:
             if "떡상중" in selected_row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
             elif "급상승" in selected_row['등급']: st.info("👍 **급상승 (300%↑)**")
             elif "주목" in selected_row['등급']: st.warning("🟢 **주목 (100%↑)**")
+
 
 
