@@ -75,9 +75,10 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0, 198, 255, 0.3);
         width: 90%; margin-left: auto; margin-right: auto;
     }
-    .stTextInput input[placeholder] { /* 불필요한 placeholder 제거 */
+    /* placeholder 스타일 */
+    .stTextInput input::placeholder {
         font-style: italic;
-        color: transparent !important; 
+        color: #888 !important; 
     }
     
 </style>
@@ -280,11 +281,11 @@ with st.sidebar:
     else:
         st.info("검색을 시작해주세요.")
 
-if st.session_state.df_result is not None:
+if st.session_state.df_result is not None and not st.session_state.df_result.empty:
     df = st.session_state.df_result
     st.success(f"신호 포착 완료! {len(df)}건")
     
-    max_perf_val = df['raw_perf'].max()
+    max_perf_val = df['raw_perf'].max() if len(df) > 0 else 1000
     if max_perf_val == 0 or pd.isna(max_perf_val): max_perf_val = 1000
 
     selection = st.dataframe(
