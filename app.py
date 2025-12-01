@@ -108,7 +108,7 @@ st.markdown("""
     /* 영상 미리보기 */
     .video-wrapper iframe {
         width: 100%;
-        height: 500px;
+        height: 600px;
         border-radius: 12px;
     }
 
@@ -116,7 +116,7 @@ st.markdown("""
     @media (max-width: 900px) {
         .summary-bar { font-size: 11px; padding: 6px 8px; }
         .summary-right { margin-left: 0; }
-        .video-wrapper iframe { height: 250px; }
+        .video-wrapper iframe { height: 300px; }
     }
 </style>
 """, unsafe_allow_html=True)
