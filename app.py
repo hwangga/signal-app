@@ -8,7 +8,7 @@ import pandas as pd
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
 # ==========================================
 
-st.set_page_config(page_title="SIGNAL - Trend Radar", layout="wide", page_icon="📡")
+st.set_page_config(page_title="SIGNAL : Insight", layout="wide", page_icon="📡")
 
 # 🌑 [스타일링: Red Killer & Neon Mint Theme]
 st.markdown("""
@@ -383,3 +383,4 @@ if st.session_state.df_result is not None:
             if "떡상중" in selected_row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
             elif "급상승" in selected_row['등급']: st.info("👍 **급상승 (300%↑)**")
             elif "주목" in selected_row['등급']: st.warning("🟢 **주목 (100%↑)**")
+
