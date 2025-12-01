@@ -3,7 +3,7 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 import isodate
 import pandas as pd
-import statistics # (Total views calculation uses this, ensuring it's available)
+import statistics
 
 # ==========================================
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
@@ -12,7 +12,7 @@ import statistics # (Total views calculation uses this, ensuring it's available)
 st.set_page_config(page_title="SIGNAL - Insight", layout="wide", page_icon="📡")
 
 # -------------------------------------------------------------------------
-# ⭐ [데이터 정의] - 이전과 동일
+# ⭐ [데이터 정의]
 # -------------------------------------------------------------------------
 CATEGORY_MAP = {
     "전체": None, "영화/애니": "1", "자동차": "2", "음악": "10", 
@@ -86,7 +86,7 @@ st.markdown("""
 st.title("📡 SIGNAL : Insight")
 
 # -------------------------------------------------------------------------
-# 함수 정의 (이전과 동일)
+# 함수 정의
 # -------------------------------------------------------------------------
 def parse_duration(d):
     try:
@@ -98,7 +98,7 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창 - [최종 Layout Fix]
+# 1. 상단 (Top) 검색창
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 if 'df_result' not in st.session_state: st.session_state.df_result = None
@@ -108,7 +108,6 @@ with st.form(key='search_form'):
         api_key = st.text_input("API 키 입력", type="password")
 
     # ⭐ [1행] 모든 요소를 아래 정렬로 밀착하여 배치
-    # 비율: 키워드(1.5) 검색(0.5) 수집(0.7) 기간(0.8) 국가(1.5) 길이(1.2)
     c1, c2, c3, c4, c5, c6 = st.columns([1.5, 0.5, 0.7, 0.8, 1.5, 1.2], vertical_alignment="bottom")
     
     with c1: query = st.text_input("키워드", placeholder="키워드 입력")
@@ -136,7 +135,7 @@ with st.form(key='search_form'):
 # -------------------------------------------------------------------------
 if 'df_result' not in st.session_state: st.session_state.df_result = None
 
-# (API Parameter Calculation - same as before)
+# (API Parameter Calculation)
 today = datetime.now()
 if days_filter == "1주일": published_after = (today - timedelta(days=7)).isoformat("T") + "Z"
 elif days_filter == "1개월": published_after = (today - timedelta(days=30)).isoformat("T") + "Z"
@@ -149,12 +148,6 @@ if len(video_durations) == 1:
     elif "롱폼" in video_durations: api_duration = "long"
 
 if search_trigger:
-    # ... (API logic implementation - same as before)
-    # ... (Data fetching, processing, sorting, DataFrame creation)
-    
-    # ... (Error handling omitted for brevity) ...
-
-    # Final logic for search trigger
     if not query:
         st.warning("⚠️ 키워드를 입력해주세요!")
     elif not api_key:
@@ -193,7 +186,8 @@ if search_trigger:
                         items.extend(video_response['items'])
 
                     channel_ids = list(set([item['snippet']['channelId'] for item in items]))
-                    channel_request = youtube.channels().list(part="statistics", id=','.join(channel_ids))
+                    
+                    # 🐛 버그 수정 #3: 중복 API 호출 제거
                     channel_response = youtube.channels().list(part="statistics", id=','.join(channel_ids)).execute()
                     subs_map = {item['id']: int(item['statistics'].get('subscriberCount', 0)) for item in channel_response['items']}
                     video_count_map = {item['id']: int(item['statistics'].get('videoCount', 0)) for item in channel_response['items']}
@@ -205,6 +199,9 @@ if search_trigger:
                         thumb = thumbs.get('maxres', thumbs.get('standard', thumbs.get('high', thumbs.get('medium'))))['url']
                         
                         view_count = int(item['statistics'].get('viewCount', 0))
+                        # 🐛 버그 수정 #1: comment_count 추가
+                        comment_count = int(item['statistics'].get('commentCount', 0))
+                        like_count = int(item['statistics'].get('likeCount', 0))
                         sub_count = subs_map.get(item['snippet']['channelId'], 0)
                         perf = (view_count / sub_count * 100) if sub_count > 0 else 0
                         
@@ -226,7 +223,8 @@ if search_trigger:
                         daily_velocity = view_count / (days_diff if days_diff else 1)
                         
                         raw_data_list.append({
-                            "raw_perf": perf, "raw_date": raw_date, "raw_view": view_count, "raw_sub": sub_count, 
+                            "raw_perf": perf, "raw_date": raw_date, "raw_view": view_count, "raw_sub": sub_count,
+                            "raw_comment": comment_count, "raw_like": like_count,  # 🐛 버그 수정 #1: 추가
                             "thumbnail": thumb, "title": item['snippet']['title'], "channel": item['snippet']['channelTitle'],
                             "grade": grade, "duration": parse_duration(item['contentDetails']['duration']), "vid": vid,
                             "총 영상 수": video_count_map.get(item['snippet']['channelId'], 0),
@@ -237,6 +235,7 @@ if search_trigger:
                     
                     display_data = []
                     for i, row in enumerate(sorted_list):
+                        # 🐛 버그 수정 #1: engagement 계산 시 raw_comment 사용 가능
                         engagement = (row['raw_comment'] / row['raw_view'] * 100) if row['raw_view'] else 0
                         display_data.append({
                             "No": str(i + 1), "썸네일": row['thumbnail'], "채널명": row['channel'], "제목": row['title'],
@@ -332,9 +331,10 @@ if st.session_state.df_result is not None:
             st.video(f"https://www.youtube.com/watch?v={vid_id}")
             
             st.markdown("---")
+            # 🐛 버그 수정 #2: c2 → c_meta2로 변경
             c_meta1, c_meta2 = st.columns(2)
             with c_meta1: st.caption(f"📺 채널명: {selected_row['채널명']} (총 영상 {selected_row['총 영상 수']})")
-            with c2: st.caption(f"📅 게시날짜: {selected_row['게시일']}")
+            with c_meta2: st.caption(f"📅 게시날짜: {selected_row['게시일']}")
             
             c_stat1, c_stat2 = st.columns(2)
             with c_stat1: st.metric("성과도", f"{selected_row['raw_perf']:,.0f}%")
@@ -345,6 +345,12 @@ if st.session_state.df_result is not None:
 
             st.divider()
             
-            if "떡상중" in selected_row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
-            elif "급상승" in selected_row['등급']: st.info("👍 **급상승 (300%↑)**")
-            elif "주목" in selected_row['등급']: st.warning("🟢 **주목 (100%↑)**")
+            # 🐛 버그 수정 #4: else 케이스 추가
+            if "떡상중" in selected_row['등급']: 
+                st.success("🔥 **떡상중 (1000%↑)**")
+            elif "급상승" in selected_row['등급']: 
+                st.info("👍 **급상승 (300%↑)**")
+            elif "주목" in selected_row['등급']: 
+                st.warning("🟢 **주목 (100%↑)**")
+            else:
+                st.caption("💤 **일반**")
