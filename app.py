@@ -3,7 +3,6 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 import isodate
 import pandas as pd
-import statistics
 
 # ==========================================
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
@@ -11,13 +10,13 @@ import statistics
 
 st.set_page_config(page_title="SIGNAL - YouTube Insight", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: 다크모드 & 완벽한 정렬]
+# 🌑 [스타일링]
 st.markdown("""
 <style>
     /* 전체 테마 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     
-    /* 사이드바 강제 확장 (700px) & 가운데 정렬 */
+    /* 사이드바 너비 강제 확장 (700px) & 가운데 정렬 */
     section[data-testid="stSidebar"] { min-width: 700px !important; }
     [data-testid="stSidebar"] { background-color: #212529; border-right: 1px solid #333; text-align: center; }
     
@@ -44,18 +43,19 @@ api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
 with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
     with st.form(key='search_form'):
+        # 로컬 테스트용 키 입력창 (클라우드에선 안보임)
         if not api_key:
             api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
 
         c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
         with c1: 
-            query = st.text_input("검색어 (엔터!)", "") # 빈칸 시작
+            query = st.text_input("검색어 (엔터!)", "")
         with c2: 
-            max_results = st.selectbox("수집수", [10, 30, 50], index=1) # 30개 기본
+            max_results = st.selectbox("수집수", [10, 30, 50], index=1)
         with c3: 
             days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
         with c4: 
-            # 국가 선택 (전세계는 None으로 처리)
+            # 국가 선택
             country_option = st.selectbox("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], index=0)
             region_map = {"🇰🇷 한국": "KR", "🇯🇵 일본": "JP", "🇺🇸 미국": "US", "🌏 전세계": None}
             region_code = region_map[country_option]
@@ -64,10 +64,9 @@ with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
         with c5: 
             video_duration = st.radio("길이", ["쇼츠", "롱폼", "전체"], index=0, horizontal=True)
         with c6: 
-            # 등급 명칭 변경 (Tier 시스템)
             filter_grade = st.multiselect("등급 필터", ["🟣 S-Tier", "🔴 A-Tier", "🟢 B-Tier", "⚪ Normal"], default=["🟣 S-Tier", "🔴 A-Tier", "🟢 B-Tier"])
         with c7: 
-            subs_range = st.slider("구독자 범위 (대기업 거르기)", 0, 1000000, (0, 1000000), 1000)
+            subs_range = st.slider("구독자 범위", 0, 1000000, (0, 1000000), 1000)
 
         search_trigger = st.form_submit_button("🚀 SIGNAL 감지 시작", type="primary", use_container_width=True)
 
@@ -107,13 +106,16 @@ if search_trigger:
                 search_response = search_request.execute()
                 video_ids = [item['id']['videoId'] for item in search_response['items']]
 
-                if not video_ids: st.error("신호 없음 (검색 결과 0건)")
+                if not video_ids: 
+                    st.error("신호 없음 (검색 결과 0건)")
                 else:
                     video_request = youtube.videos().list(part="statistics, snippet, contentDetails", id=','.join(video_ids))
                     video_response = video_request.execute()
+                    
                     channel_ids = [item['snippet']['channelId'] for item in video_response['items']]
                     channel_request = youtube.channels().list(part="statistics", id=','.join(channel_ids))
                     channel_response = channel_request.execute()
+                    
                     subs_map = {item['id']: int(item['statistics'].get('subscriberCount', 0)) for item in channel_response['items']}
 
                     raw_data_list = []
@@ -126,7 +128,6 @@ if search_trigger:
                         sub_count = subs_map.get(item['snippet']['channelId'], 0)
                         perf = (view_count / sub_count * 100) if sub_count > 0 else 0
                         
-                        # ⭐ 전문적인 Tier 명칭 적용
                         if perf >= 1000: grade = "🟣 S-Tier"
                         elif perf >= 300: grade = "🔴 A-Tier"
                         elif perf >= 100: grade = "🟢 B-Tier"
@@ -152,7 +153,6 @@ if search_trigger:
                             "vid": vid
                         })
                     
-                    # 정렬 (성과도 > 최신순)
                     sorted_list = sorted(raw_data_list, key=lambda x: (x['raw_perf'], x['raw_date']), reverse=True)
                     
                     display_data = []
@@ -166,7 +166,7 @@ if search_trigger:
                             "게시일": row['raw_date'].strftime("%Y/%m/%d"),
                             "구독자": f"{row['raw_sub']:,}", 
                             "조회수": f"{row['raw_view']:,}",
-                            "성과도": row['raw_perf'], # 그래프용 숫자
+                            "성과도": row['raw_perf'],
                             "등급": row['grade'],
                             "길이": row['duration'],
                             "댓글": f"{row['raw_comment']:,}",
@@ -180,22 +180,19 @@ if search_trigger:
 
                     st.session_state.df_result = pd.DataFrame(display_data)
 
-    except Exception as e: st.error(f"에러: {e}")
+        except Exception as e: 
+            st.error(f"에러 발생: {e}")
 
-# 3. 화면 출력 (사이드바 대시보드 + 리스트)
+# 3. 화면 출력
 with st.sidebar:
     st.header("🎞️ SIGNAL PREVIEW")
     
     if st.session_state.df_result is not None and not st.session_state.df_result.empty:
         df = st.session_state.df_result
-        
-        # 기본 상태: 요약 대시보드 (선택 안했을 때도 정보 제공)
         total_views = df['raw_view'].sum()
-        avg_perf = df['raw_perf'].mean()
         top_tier_count = len(df[df['등급'].str.contains("S-Tier")])
         
-        # 탭을 만들어 미리보기와 통계를 분리하면 더 깔끔하지만, 여기선 조건부 렌더링 사용
-        preview_container = st.container() # 여기가 채워질 공간
+        preview_container = st.container()
         
         st.divider()
         st.markdown("### 📊 검색 요약")
@@ -212,17 +209,16 @@ if st.session_state.df_result is not None:
     df = st.session_state.df_result
     st.success(f"신호 포착 완료! {len(df)}건")
     
-    # 리스트 출력
     selection = st.dataframe(
         df,
         column_order=("No", "썸네일", "채널명", "제목", "게시일", "구독자", "조회수", "성과도", "등급", "길이", "댓글", "좋아요", "참여율", "이동"),
         column_config={
             "No": st.column_config.TextColumn("No", width=60),
-            "썸네일": st.column_config.ImageColumn("썸네일", width=105), # 30% 축소
+            "썸네일": st.column_config.ImageColumn("썸네일", width=105),
             "채널명": st.column_config.TextColumn("채널명", width=180),
             "제목": st.column_config.TextColumn("제목", width=500),
             "게시일": st.column_config.TextColumn("게시일", width=110),
-            "구독자": st.column_config.TextColumn("구독자", width=110), # 15% 축소
+            "구독자": st.column_config.TextColumn("구독자", width=110),
             "조회수": st.column_config.TextColumn("조회수", width=110),
             "성과도": st.column_config.ProgressColumn("성과도", format="%.0f%%", min_value=0, max_value=1000, width=110),
             "등급": st.column_config.TextColumn("등급", width=110),
@@ -237,16 +233,13 @@ if st.session_state.df_result is not None:
         on_select="rerun", selection_mode="single-row"
     )
 
-    # 선택 시 사이드바 업데이트
     if selection.selection.rows:
         row = df.iloc[selection.selection.rows[0]]
         
-        # 기존 요약 덮어쓰기 위해 empty() 사용 가능하지만, 여기선 위쪽 컨테이너 채움
         with preview_container:
             st.image(row['썸네일'], use_container_width=True)
-            st.markdown(f"### {row['제목']}") # 링크 제거 (깔끔하게)
+            st.markdown(f"### {row['제목']}")
             
-            # 정보창 2단 분리
             col_info_L, col_info_R = st.columns(2)
             with col_info_L:
                 st.metric("성과도", f"{row['raw_perf']:,.0f}%")
@@ -260,6 +253,5 @@ if st.session_state.df_result is not None:
             if "S-Tier" in row['등급']: st.success("🔥 **강력 추천!** (S-Tier)")
             elif "A-Tier" in row['등급']: st.info("👍 **훌륭한 소재** (A-Tier)")
             
-            # 영상 플레이어
             st.write("🎥 **영상 바로보기**")
             st.video(f"https://www.youtube.com/watch?v={row['ID']}")
