@@ -461,22 +461,25 @@ with st.sidebar:
         else:
             # 네온 스타일 제목
             st.markdown(
-                f"""
-                <h5 style="
-                    margin: 0 0 4px 0;
-                    color: #7DF9FF;
-                    line-height: 1.4;
-                    font-weight: 600;
-                    text-shadow:
-                        0 0 6px rgba(56, 189, 248, 0.9),
-                        0 0 12px rgba(56, 189, 248, 0.7),
-                        0 0 18px rgba(56, 189, 248, 0.6);
-                ">
-                    {selected_row['제목']}
-                </h5>
-                """,
-                unsafe_allow_html=True,
-            )
+    f"""
+    <h3 style="
+        margin: 4px 0 10px 0;
+        color: #7DF9FF;
+        line-height: 1.4;
+        font-weight: 700;
+        text-align: center;
+        text-shadow:
+            0 0 6px rgba(56, 189, 248, 0.9),
+            0 0 12px rgba(56, 189, 248, 0.7),
+            0 0 20px rgba(56, 189, 248, 0.8),
+            0 0 26px rgba(56, 189, 248, 0.7);
+    ">
+        {selected_row['제목']}
+    </h3>
+    """,
+    unsafe_allow_html=True,
+)
+
 
             channel_name = selected_row["채널명"]
             total_videos = selected_row["총 영상 수"]
