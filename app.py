@@ -16,7 +16,7 @@ st.markdown("""
     /* 전체 테마 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     
-    /* ⭐ 사이드바 너비 강제 확장 (700px - 아주 넓게) */
+    /* ⭐ 사이드바 너비 강제 확장 (700px) */
     section[data-testid="stSidebar"] { min-width: 700px !important; }
     [data-testid="stSidebar"] { background-color: #212529; border-right: 1px solid #333; }
     
@@ -131,7 +131,6 @@ if search_trigger and api_key:
                 # 정렬 수행
                 sorted_list = sorted(raw_data_list, key=lambda x: (x['raw_perf'], x['raw_date']), reverse=True)
                 
-                # 화면 표시 데이터 생성
                 display_data = []
                 for i, row in enumerate(sorted_list):
                     engagement = (row['raw_comment'] / row['raw_view'] * 100) if row['raw_view'] else 0
@@ -144,7 +143,6 @@ if search_trigger and api_key:
                         "게시일": row['raw_date'].strftime("%Y/%m/%d"),
                         "구독자": f"{row['raw_sub']:,}", 
                         "조회수": f"{row['raw_view']:,}",
-                        # ⭐ 성과도는 그래프를 위해 '숫자' 그대로 둡니다 (config에서 처리)
                         "성과도": row['raw_perf'], 
                         "등급": row['grade'],
                         "길이": row['duration'],
@@ -176,13 +174,12 @@ if st.session_state.df_result is not None:
         column_order=("No", "썸네일", "채널명", "제목", "게시일", "구독자", "조회수", "성과도", "등급", "길이", "댓글", "좋아요", "참여율", "이동"),
         column_config={
             "No": st.column_config.TextColumn("No", width=50),
-            "썸네일": st.column_config.ImageColumn("썸네일", width=105), # 150 -> 105 (30% 축소)
-            "채널명": st.column_config.TextColumn("채널명", width=180), # 유지
-            "제목": st.column_config.TextColumn("제목", width=500),    # 유지
-            "게시일": st.column_config.TextColumn("게시일", width=110), # 130 -> 110 (15% 축소)
+            "썸네일": st.column_config.ImageColumn("썸네일", width=105),
+            "채널명": st.column_config.TextColumn("채널명", width=180),
+            "제목": st.column_config.TextColumn("제목", width=500),
+            "게시일": st.column_config.TextColumn("게시일", width=110),
             "구독자": st.column_config.TextColumn("구독자", width=110),
             "조회수": st.column_config.TextColumn("조회수", width=110),
-            # ⭐ 성과도: 숫자이므로 ProgressColumn 적용 가능 (그래프 부활)
             "성과도": st.column_config.ProgressColumn("성과도", format="%.0f%%", min_value=0, max_value=1000, width=110),
             "등급": st.column_config.TextColumn("등급", width=110),
             "길이": st.column_config.TextColumn("길이", width=90),
@@ -199,12 +196,27 @@ if st.session_state.df_result is not None:
     if selection.selection.rows:
         row = df.iloc[selection.selection.rows[0]]
         with preview_container:
-            st.image(row['썸네일'], use_container_width=True)
-            st.markdown(f"### [{row['제목']}](https://www.youtube.com/watch?v={row['ID']})")
-            c1, c2 = st.columns(2)
-            c1.metric("성과도", f"{row['raw_perf']:.0f}%") # 사이드바엔 숫자만
-            c2.metric("조회수", f"{row['raw_view']:,}")
+            # 1. 제목 (맨 위)
+            st.markdown(f"#### {row['제목']}")
+            
+            # 2. 정보창 (2단 분리)
+            col_info_L, col_info_R = st.columns(2)
+            with col_info_L:
+                # ⭐ 성과도 쉼표 추가 (f"{숫자:,.0f}%")
+                st.metric("성과도", f"{row['raw_perf']:,.0f}%")
+                st.metric("조회수", f"{row['raw_view']:,}")
+            with col_info_R:
+                st.caption(f"📺 {row['채널명']}")
+                st.caption(f"📅 {row['게시일']}")
+                # 유튜브 이동 버튼
+                st.link_button("🔗 유튜브로 이동", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True)
+
             st.divider()
-            if "초대박" in row['등급']: st.success("🔥 강력한 떡상 신호!")
-            st.markdown(f"**채널:** {row['채널명']}")
-            st.link_button("📺 유튜브에서 보기", f"https://www.youtube.com/watch?v={row['ID']}", type="primary", use_container_width=True)
+            
+            # 3. 등급 뱃지
+            if "초대박" in row['등급']: st.success("🔥 **강력 추천!** (초대박 등급)")
+            elif "대박" in row['등급']: st.info("👍 **훌륭한 소재** (대박 등급)")
+            
+            # 4. ⭐ 영상 플레이어 탑재 (여기서 바로 재생!)
+            st.write("🎥 **영상 바로보기**")
+            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
