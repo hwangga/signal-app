@@ -10,7 +10,7 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - Insight", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: 민트 테마 + 슬림 레이아웃 + 네온 효과]
+# 🌑 [스타일링: 민트 테마 + 초슬림 레이아웃]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
@@ -38,13 +38,14 @@ st.markdown("""
     /* 5. 썸네일 이미지 */
     img { border-radius: 6px; }
     
-    /* 6. 버튼 및 입력창 색상 강제 변경 (민트) */
+    /* 6. 버튼 및 입력창 색상 강제 변경 (Red Killer) */
     div.stButton > button, a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
         box-shadow: 0 4px 6px rgba(0, 198, 255, 0.3) !important;
+        padding: 0.2rem 0.5rem !important; /* 버튼 패딩 축소 */
     }
     div.stButton > button:hover, a[kind="primary"]:hover {
         transform: scale(1.02) !important;
@@ -84,7 +85,7 @@ st.markdown("""
     /* 메트릭 숫자 */
     [data-testid="stMetricValue"] { font-size: 28px !important; color: #00E5FF !important; font-weight: 700 !important; }
     
-    /* ⭐ 검색바 슬림화 (패딩 축소) */
+    /* ⭐ 검색바 초슬림화 */
     [data-testid="stForm"] {
         padding: 10px 15px !important;
         background-color: #151921;
@@ -109,7 +110,7 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창 - [초압축 1줄 레이아웃 도전]
+# 1. 상단 (Top) 검색창 - [초압축 6열 배치]
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
@@ -117,14 +118,14 @@ with st.form(key='search_form'):
     if not api_key:
         api_key = st.text_input("API 키 입력", type="password")
 
-    # ⭐ [1행] 키워드(작게) + 검색버튼 + 수집 + 기간 + 국가 + 길이 (최대한 한 줄에)
-    # 비율: 키워드 1.5, 버튼 0.8, 수집 0.8, 기간 1, 국가 2, 길이 1.5
-    c1, c2, c3, c4, c5, c6 = st.columns([1.5, 0.8, 0.8, 1, 2, 1.5], vertical_alignment="bottom")
+    # ⭐ [1행] 6개 요소를 한 줄에 빡빡하게 배치 (비율 조절)
+    # 키워드(1.2) | 버튼(0.5) | 수집(0.6) | 기간(0.7) | 국가(1.5) | 길이(1.2)
+    c1, c2, c3, c4, c5, c6 = st.columns([1.2, 0.5, 0.6, 0.7, 1.5, 1.2], vertical_alignment="bottom")
     
     with c1: 
         query = st.text_input("키워드", "")
     with c2: 
-        search_trigger = st.form_submit_button("🚀 검색", type="primary", use_container_width=True)
+        search_trigger = st.form_submit_button("🚀", type="primary", use_container_width=True) # 버튼 텍스트 줄임
     with c3: 
         max_results = st.selectbox("수집", [10, 30, 50, 100], index=1)
     with c4: 
@@ -136,14 +137,13 @@ with st.form(key='search_form'):
         # 길이 (Pills)
         video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
 
-    # ⭐ [2행] 등급 + 구독자 (나머지)
-    c7, c8 = st.columns([4, 2], vertical_alignment="bottom")
+    # ⭐ [2행] 등급 + 구독자
+    c7, c8 = st.columns([3, 2], vertical_alignment="bottom")
     with c7:
-        # 등급 (Pills)
-        filter_grade = st.pills("등급 필터", 
+        filter_grade = st.pills("등급", 
                                 ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
                                 default=["🚀 떡상중", "📈 급상승", "👀 주목"],
-                                selection_mode="multi", label_visibility="collapsed")
+                                selection_mode="multi")
     with c8:
         st.caption("구독자 범위")
         subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
@@ -289,9 +289,7 @@ with st.sidebar:
     st.markdown('<div style="height: 60px;"></div>', unsafe_allow_html=True)
     st.markdown("""
         <div class="sidebar-logo">
-            <h3 style='margin:0; color: white; font-size: 20px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.7);'>
-                📡 SIGNAL PREVIEW
-            </h3>
+            <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>📡 SIGNAL PREVIEW</h3>
         </div>
     """, unsafe_allow_html=True)
     
@@ -339,7 +337,7 @@ if st.session_state.df_result is not None:
         on_select="rerun", selection_mode="single-row"
     )
 
-    # 1번 자동 선택 로직
+    # 1번 자동 선택
     selected_row = None
     if selection.selection.rows:
         selected_row = df.iloc[selection.selection.rows[0]]
@@ -348,11 +346,9 @@ if st.session_state.df_result is not None:
 
     if selected_row is not None:
         with preview_container:
-            # ⭐ [자동 선택됨] 메시지 추가 (선택 안 했을 때만)
             if not selection.selection.rows:
                 st.caption("✅ No.1 영상 자동 선택됨")
 
-            # ⭐ [네온 타이틀] 부활!
             st.markdown(f"""
                 <div style='padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;'>
                     <h4 style='margin:0; color: #00E5FF; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); line-height: 1.4; font-size: 18px;'>
