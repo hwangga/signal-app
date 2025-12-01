@@ -360,9 +360,10 @@ if st.session_state.df_result is not None:
     if selected_row is not None:
         with preview_container:
             # [옵션 2] 왼쪽 테두리 강조
+           # [옵션 3] 네온 텍스트
             st.markdown(f"""
-                <div style='border-left: 6px solid #00E5FF; padding-left: 15px; background-color: rgba(255, 255, 255, 0.05); padding-top: 10px; padding-bottom: 10px; border-radius: 0 8px 8px 0;'>
-                    <h4 style='margin:0; color: #FAFAFA; line-height: 1.4;'>{selected_row['제목']}</h4>
+                <div style='padding: 10px 0;'>
+                    <h4 style='margin:0; color: #00E5FF; text-shadow: 0 0 15px rgba(0, 229, 255, 0.8); line-height: 1.4;'>{selected_row['제목']}</h4>
                 </div>
             """, unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
@@ -385,6 +386,7 @@ if st.session_state.df_result is not None:
             if "떡상중" in selected_row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
             elif "급상승" in selected_row['등급']: st.info("👍 **급상승 (300%↑)**")
             elif "주목" in selected_row['등급']: st.warning("🟢 **주목 (100%↑)**")
+
 
 
 
