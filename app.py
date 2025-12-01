@@ -8,9 +8,9 @@ import pandas as pd
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
 # ==========================================
 
-st.set_page_config(page_title="SIGNAL - YouTube Hunter", layout="wide", page_icon="📡")
+st.set_page_config(page_title="SIGNAL - Trend Radar", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: Red Killer V6 - Expander & Logo Color Fix]
+# 🌑 [스타일링: Red Killer & Neon Mint Theme]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
@@ -36,10 +36,10 @@ st.markdown("""
     img { border-radius: 6px; }
     
     /* =================================================================
-       ⭐ [Red Killer] 빨간색 요소 박멸 (Expander 추가)
+       ⭐ [Red Killer] 빨간색 요소 박멸 & 민트 테마 적용
     ================================================================= */
     
-    /* (1) 버튼 */
+    /* (1) 버튼 (검색, 이동) */
     div.stButton > button, 
     a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
@@ -70,33 +70,29 @@ st.markdown("""
         border-color: #00E5FF !important;
     }
 
-    /* (3) ⭐ [추가] Expander (검색 옵션 박스) 빨간색 제거 */
+    /* (3) Expander (검색 옵션 박스) 스타일 */
     .streamlit-expanderHeader {
-        color: #00E5FF !important; /* 헤더 글씨 민트색 */
+        color: #00E5FF !important;
         font-weight: bold !important;
     }
     .streamlit-expanderContent {
         border-color: #30475e !important;
     }
-    /* 선택된 입력창 테두리 색상 */
     input:focus, div[data-baseweb="select"] > div:focus-within {
         border-color: #00E5FF !important;
     }
 
     /* ================================================================= */
 
-   /* 사이드바 로고 박스 */
+    /* 6. 사이드바 로고 박스 (네온 테두리) */
     .sidebar-logo {
         background: linear-gradient(135deg, #1e3a8a 0%, #00c6ff 100%) !important;
         padding: 12px;
         border-radius: 8px;
         margin-bottom: 20px;
         text-align: center;
-        
-        /* 👇 [여기!] 이 줄을 찾아서 아래처럼 바꾸세요 */
-        border: 2px solid #00E5FF !important;  /* 민트색 진한 테두리 */
-        
-        box-shadow: 0 4px 15px rgba(0, 198, 255, 0.3);
+        border: 2px solid #00E5FF !important; /* 형광 민트 테두리 */
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
         width: 90%;
         margin-left: auto;
         margin-right: auto;
@@ -107,7 +103,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📡 SIGNAL : YouTube Hunter")
+# ⭐ [타이틀 변경] YouTube Hunter -> Trend Radar
+st.title("📡 SIGNAL : Trend Radar")
 
 # -------------------------------------------------------------------------
 # 함수 정의
@@ -294,13 +291,13 @@ if search_trigger:
 # 3. 화면 출력
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # ⭐ [요청 반영] 물리적 여백 60px (로고 내리기)
+    # ⭐ 상단 물리적 여백 (60px)
     st.markdown('<div style="height: 60px;"></div>', unsafe_allow_html=True)
     
-    # ⭐ [요청 반영] 로고 박스 색상 복구
+    # 로고 박스 (네온 테두리 적용)
     st.markdown("""
         <div class="sidebar-logo">
-            <h3 style='margin:0; color: white; font-size: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);'>
+            <h3 style='margin:0; color: white; font-size: 20px; text-shadow: 0 0 10px rgba(0, 229, 255, 0.7);'>
                 📡 SIGNAL PREVIEW
             </h3>
         </div>
@@ -359,14 +356,14 @@ if st.session_state.df_result is not None:
 
     if selected_row is not None:
         with preview_container:
-            # [옵션 2] 왼쪽 테두리 강조
-           # [옵션 3] 네온 텍스트
+            # ⭐ [네온 효과] 제목 디자인
             st.markdown(f"""
-                <div style='padding: 10px 0;'>
-                    <h4 style='margin:0; color: #00E5FF; text-shadow: 0 0 15px rgba(0, 229, 255, 0.8); line-height: 1.4;'>{selected_row['제목']}</h4>
+                <div style='padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;'>
+                    <h4 style='margin:0; color: #00E5FF; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); line-height: 1.4; font-size: 18px;'>
+                        {selected_row['제목']}
+                    </h4>
                 </div>
             """, unsafe_allow_html=True)
-            st.markdown("<br>", unsafe_allow_html=True)
             
             st.video(f"https://www.youtube.com/watch?v={selected_row['ID']}")
             
@@ -386,9 +383,3 @@ if st.session_state.df_result is not None:
             if "떡상중" in selected_row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
             elif "급상승" in selected_row['등급']: st.info("👍 **급상승 (300%↑)**")
             elif "주목" in selected_row['등급']: st.warning("🟢 **주목 (100%↑)**")
-
-
-
-
-
-
