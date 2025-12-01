@@ -39,13 +39,13 @@ st.markdown("""
 
     /* 사이드바 폭 & 스타일 */
     section[data-testid="stSidebar"] {
-        min-width: 420px !important;
+        min-width: 700px !important;
         max-width: 700px !important;
         background-color: #111827;
         border-right: 1px solid rgba(148, 163, 184, 0.3);
     }
     section[data-testid="stSidebar"] .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0.8rem !important;
     }
 
     /* 입력/버튼 높이 통일 */
@@ -120,7 +120,7 @@ st.markdown("""
     /* 영상 미리보기 */
     .video-wrapper iframe {
         width: 100%;
-        height: 500px;
+        height: 260px;
         border-radius: 10px;
     }
 
@@ -128,6 +128,7 @@ st.markdown("""
     @media (max-width: 900px) {
         section[data-testid="stSidebar"] {
             min-width: 320px !important;
+            max-width: 100% !important;
         }
         .summary-bar { font-size: 11px; padding: 6px 8px; }
         .summary-right { margin-left: 0; }
@@ -163,77 +164,11 @@ if "selected_index" not in st.session_state:
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
 # -------------------------------------------------------------------------
-# ▶ 사이드바 (좌측): PREVIEW + 검색폼
+# ▶ 사이드바 (PREVIEW + 검색폼)
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # --- PREVIEW 영역 상단 ---
-    st.markdown(
-        "<h4 style='margin:0 0 0.5rem 0;'>🎬 SIGNAL PREVIEW</h4>",
-        unsafe_allow_html=True,
-    )
-
-    df = st.session_state.df_result
-    selected_row = None
-
-    if df is not None and not df.empty:
-        if 0 <= st.session_state.selected_index < len(df):
-            selected_row = st.session_state.df_result.iloc[st.session_state.selected_index]
-
-    if selected_row is None:
-        st.info("테이블에서 영상을 선택하면 요약과 미리보기가 여기 나타납니다.")
-    else:
-        # 제목
-        st.markdown(
-            f"""
-            <h5 style='margin:0; color:#00E5FF; line-height:1.4;'>
-                {selected_row['제목']}
-            </h5>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # 요약바 + 유튜브 링크
-        channel_name = selected_row["채널명"]
-        total_videos = selected_row["총 영상 수"]
-        published = selected_row["게시일"]
-        perf_str = f"{selected_row['raw_perf']:,.0f}%"
-        views_str = f"{selected_row['raw_view']:,}"
-        eng_str = f"{float(selected_row['raw_engagement']):.2f}%"
-        url = selected_row["이동"]
-
-        summary_html = f"""
-        <div class="summary-bar">
-            <div class="summary-left">
-                <span>📺 <b>{channel_name}</b></span>
-                <span>· 총 {total_videos}</span>
-                <span>· 📅 {published}</span>
-            </div>
-            <div class="summary-right">
-                <span class="chip chip-hot">🔥 {perf_str}</span>
-                <span class="chip chip-view">👁 {views_str}</span>
-                <span class="chip chip-eng">💬 {eng_str}</span>
-                <a class="summary-link" href="{url}" target="_blank">유튜브에서 보기</a>
-            </div>
-        </div>
-        """
-        st.markdown(summary_html, unsafe_allow_html=True)
-
-        # 영상 미리보기
-        youtube_embed = f"https://www.youtube.com/embed/{selected_row['ID']}"
-        st.markdown(
-            f"""
-            <div class="video-wrapper">
-                <iframe
-                    src="{youtube_embed}"
-                    frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen>
-                </iframe>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
+    # 미리보기 영역을 위한 placeholder (위쪽에 위치)
+    preview_container = st.container()
     st.markdown("---")
 
     # --- 검색 폼 (사이드바 하단) ---
@@ -292,219 +227,296 @@ with st.sidebar:
             label_visibility="collapsed",
         )
 
-# -------------------------------------------------------------------------
-# ▶ 검색 로직 (메인 영역에서 처리)
-# -------------------------------------------------------------------------
-now = datetime.now()
+    # ---------------------------------------------------------------------
+    # ▶ 검색 로직 (폼 바로 아래에서 처리)
+    # ---------------------------------------------------------------------
+    now = datetime.now()
 
-if "search_trigger" in locals() and search_trigger:
-    if not query:
-        st.warning("⚠️ 키워드를 입력해주세요!")
-    elif not api_key:
-        st.error("🔑 API 키가 설정되지 않았습니다.")
-    else:
-        try:
-            youtube = build("youtube", "v3", developerKey=api_key)
+    if "search_trigger" in locals() and search_trigger:
+        if not query:
+            st.warning("⚠️ 키워드를 입력해주세요!")
+        elif not api_key:
+            st.error("🔑 API 키가 설정되지 않았습니다.")
+        else:
+            try:
+                youtube = build("youtube", "v3", developerKey=api_key)
 
-            # 기간 필터
-            if days_filter == "1주일":
-                published_after = (now - timedelta(days=7)).isoformat("T") + "Z"
-            elif days_filter == "1개월":
-                published_after = (now - timedelta(days=30)).isoformat("T") + "Z"
-            elif days_filter == "3개월":
-                published_after = (now - timedelta(days=90)).isoformat("T") + "Z"
-            else:
-                published_after = None
-
-            api_duration = "any"
-            if len(video_durations) == 1:
-                api_duration = "short" if "쇼츠" in video_durations else "long"
-
-            all_video_ids = []
-
-            with st.spinner(f"📡 '{query}' 신호 분석 중..."):
-                # 국가별 검색
-                target_countries = [
-                    region_map[c] for c in country_options if c != "🌏전체"
-                ]
-                if "🌏전체" in country_options:
-                    target_countries.append(None)
-                if not target_countries:
-                    target_countries = [None]
-
-                for region_code in target_countries:
-                    per_country_max = min(
-                        50, max(10, int(max_results / len(target_countries)))
-                    )
-
-                    params = {
-                        "part": "snippet",
-                        "q": query,
-                        "maxResults": per_country_max,
-                        "order": "viewCount",
-                        "type": "video",
-                        "videoDuration": api_duration,
-                    }
-                    if published_after:
-                        params["publishedAfter"] = published_after
-                    if region_code:
-                        params["regionCode"] = region_code
-
-                    search_res = youtube.search().list(**params).execute()
-                    all_video_ids.extend(
-                        [item["id"]["videoId"] for item in search_res.get("items", [])]
-                    )
-
-                all_video_ids = list(set(all_video_ids))
-
-                if not all_video_ids:
-                    st.error("신호 없음 (검색 결과 0건)")
-                    st.session_state.df_result = pd.DataFrame()
+                # 기간 필터
+                if days_filter == "1주일":
+                    published_after = (now - timedelta(days=7)).isoformat("T") + "Z"
+                elif days_filter == "1개월":
+                    published_after = (now - timedelta(days=30)).isoformat("T") + "Z"
+                elif days_filter == "3개월":
+                    published_after = (now - timedelta(days=90)).isoformat("T") + "Z"
                 else:
-                    # 1) 비디오 상세 정보
-                    video_items = []
-                    chunks = [
-                        all_video_ids[i : i + 50]
-                        for i in range(0, len(all_video_ids), 50)
+                    published_after = None
+
+                api_duration = "any"
+                if len(video_durations) == 1:
+                    api_duration = "short" if "쇼츠" in video_durations else "long"
+
+                all_video_ids = []
+
+                with st.spinner(f"📡 '{query}' 신호 분석 중..."):
+                    # 국가별 검색
+                    target_countries = [
+                        region_map[c] for c in country_options if c != "🌏전체"
                     ]
-                    for c in chunks:
-                        res = (
-                            youtube.videos()
-                            .list(
-                                part="statistics,snippet,contentDetails",
-                                id=",".join(c),
+                    if "🌏전체" in country_options:
+                        target_countries.append(None)
+                    if not target_countries:
+                        target_countries = [None]
+
+                    for region_code in target_countries:
+                        per_country_max = min(
+                            50, max(10, int(max_results / len(target_countries)))
+                        )
+
+                        params = {
+                            "part": "snippet",
+                            "q": query,
+                            "maxResults": per_country_max,
+                            "order": "viewCount",
+                            "type": "video",
+                            "videoDuration": api_duration,
+                        }
+                        if published_after:
+                            params["publishedAfter"] = published_after
+                        if region_code:
+                            params["regionCode"] = region_code
+
+                        search_res = youtube.search().list(**params).execute()
+                        all_video_ids.extend(
+                            [item["id"]["videoId"] for item in search_res.get("items", [])]
+                        )
+
+                    all_video_ids = list(set(all_video_ids))
+
+                    if not all_video_ids:
+                        st.error("신호 없음 (검색 결과 0건)")
+                        st.session_state.df_result = pd.DataFrame()
+                    else:
+                        # 1) 비디오 상세 정보
+                        video_items = []
+                        chunks = [
+                            all_video_ids[i : i + 50]
+                            for i in range(0, len(all_video_ids), 50)
+                        ]
+                        for c in chunks:
+                            res = (
+                                youtube.videos()
+                                .list(
+                                    part="statistics,snippet,contentDetails",
+                                    id=",".join(c),
+                                )
+                                .execute()
                             )
-                            .execute()
+                            video_items.extend(res.get("items", []))
+
+                        # 2) 채널 정보 (50개씩)
+                        channel_ids = list(
+                            set([item["snippet"]["channelId"] for item in video_items])
                         )
-                        video_items.extend(res.get("items", []))
+                        subs_map, video_count_map = {}, {}
 
-                    # 2) 채널 정보 (50개씩)
-                    channel_ids = list(
-                        set([item["snippet"]["channelId"] for item in video_items])
-                    )
-                    subs_map, video_count_map = {}, {}
+                        ch_chunks = [
+                            channel_ids[i : i + 50]
+                            for i in range(0, len(channel_ids), 50)
+                        ]
+                        for cc in ch_chunks:
+                            cres = (
+                                youtube.channels()
+                                .list(part="statistics", id=",".join(cc))
+                                .execute()
+                            )
+                            for ch in cres.get("items", []):
+                                stats = ch.get("statistics", {})
+                                subs_map[ch["id"]] = int(stats.get("subscriberCount", 0))
+                                video_count_map[ch["id"]] = int(stats.get("videoCount", 0))
 
-                    ch_chunks = [
-                        channel_ids[i : i + 50]
-                        for i in range(0, len(channel_ids), 50)
-                    ]
-                    for cc in ch_chunks:
-                        cres = (
-                            youtube.channels()
-                            .list(part="statistics", id=",".join(cc))
-                            .execute()
-                        )
-                        for ch in cres.get("items", []):
-                            stats = ch.get("statistics", {})
-                            subs_map[ch["id"]] = int(stats.get("subscriberCount", 0))
-                            video_count_map[ch["id"]] = int(stats.get("videoCount", 0))
+                        # 3) 지표 계산
+                        lst = []
+                        for item in video_items:
+                            vid = item["id"]
+                            snippet = item["snippet"]
+                            stats = item.get("statistics", {})
+                            channel_id = snippet["channelId"]
 
-                    # 3) 지표 계산
-                    lst = []
-                    for item in video_items:
-                        vid = item["id"]
-                        snippet = item["snippet"]
-                        stats = item.get("statistics", {})
-                        channel_id = snippet["channelId"]
+                            view = int(stats.get("viewCount", 0))
+                            comment = int(stats.get("commentCount", 0))
+                            like_count = int(stats.get("likeCount", 0))
+                            subs = subs_map.get(channel_id, 0)
+                            perf = (view / subs * 100) if subs else 0
 
-                        view = int(stats.get("viewCount", 0))
-                        comment = int(stats.get("commentCount", 0))
-                        like_count = int(stats.get("likeCount", 0))
-                        subs = subs_map.get(channel_id, 0)
-                        perf = (view / subs * 100) if subs else 0
+                            # 등급
+                            if perf >= 1000:
+                                grade = "🚀 떡상중"
+                            elif perf >= 300:
+                                grade = "📈 급상승"
+                            elif perf >= 100:
+                                grade = "👀 주목"
+                            else:
+                                grade = "💤 일반"
 
-                        # 등급 (괄호/퍼센트 없는 심플 버전)
-                        if perf >= 1000:
-                            grade = "🚀 떡상중"
-                        elif perf >= 300:
-                            grade = "📈 급상승"
-                        elif perf >= 100:
-                            grade = "👀 주목"
-                        else:
-                            grade = "💤 일반"
+                            if not any(g in grade for g in filter_grade):
+                                continue
 
-                        if not any(g in grade for g in filter_grade):
-                            continue
+                            # 구독자 범위 필터
+                            if not (subs_range[0] <= subs <= subs_range[1]):
+                                continue
 
-                        # 구독자 범위 필터
-                        if not (subs_range[0] <= subs <= subs_range[1]):
-                            continue
+                            # 날짜 & 일일 속도
+                            raw_date = datetime.strptime(
+                                snippet["publishedAt"][:10], "%Y-%m-%d"
+                            )
+                            days = (now - raw_date).days
+                            velocity = view / (days if days else 1)
 
-                        # 날짜 & 일일 속도
-                        raw_date = datetime.strptime(
-                            snippet["publishedAt"][:10], "%Y-%m-%d"
-                        )
-                        days = (now - raw_date).days
-                        velocity = view / (days if days else 1)
-
-                        thumbnails = snippet["thumbnails"]
-                        thumb = thumbnails.get(
-                            "maxres",
-                            thumbnails.get(
-                                "standard",
-                                thumbnails.get("high", thumbnails.get("medium")),
-                            ),
-                        )["url"]
-
-                        lst.append(
-                            {
-                                "raw_perf": perf,
-                                "raw_view": view,
-                                "raw_comment": comment,
-                                "raw_like": like_count,
-                                "raw_engagement": (comment / view * 100)
-                                if view
-                                else 0,
-                                "raw_date": raw_date,
-                                "thumbnail": thumb,
-                                "title": snippet["title"],
-                                "channel": snippet["channelTitle"],
-                                "grade": grade,
-                                "duration": parse_duration(
-                                    item["contentDetails"]["duration"]
+                            thumbnails = snippet["thumbnails"]
+                            thumb = thumbnails.get(
+                                "maxres",
+                                thumbnails.get(
+                                    "standard",
+                                    thumbnails.get("high", thumbnails.get("medium")),
                                 ),
-                                "vid": vid,
-                                "총 영상 수": video_count_map.get(channel_id, 0),
-                                "일일 속도": velocity,
-                                "게시일": raw_date.strftime("%Y/%m/%d"),
-                            }
+                            )["url"]
+
+                            lst.append(
+                                {
+                                    "raw_perf": perf,
+                                    "raw_view": view,
+                                    "raw_comment": comment,
+                                    "raw_like": like_count,
+                                    "raw_engagement": (comment / view * 100)
+                                    if view
+                                    else 0,
+                                    "raw_date": raw_date,
+                                    "thumbnail": thumb,
+                                    "title": snippet["title"],
+                                    "channel": snippet["channelTitle"],
+                                    "grade": grade,
+                                    "duration": parse_duration(
+                                        item["contentDetails"]["duration"]
+                                    ),
+                                    "vid": vid,
+                                    "총 영상 수": video_count_map.get(channel_id, 0),
+                                    "일일 속도": velocity,
+                                    "게시일": raw_date.strftime("%Y/%m/%d"),
+                                }
+                            )
+
+                        lst = sorted(
+                            lst, key=lambda x: (x["raw_perf"], x["raw_date"]), reverse=True
                         )
 
-                    lst = sorted(
-                        lst, key=lambda x: (x["raw_perf"], x["raw_date"]), reverse=True
-                    )
+                        display = []
+                        for i, r in enumerate(lst):
+                            display.append(
+                                {
+                                    "No": i + 1,
+                                    "썸네일": r["thumbnail"],
+                                    "채널명": r["channel"],
+                                    "제목": r["title"],
+                                    "게시일": r["게시일"],
+                                    "총 영상 수": f"{r['총 영상 수']:,}개",
+                                    "조회수": f"{r['raw_view']:,}",
+                                    "성과도": r["raw_perf"],
+                                    "등급": r["grade"],
+                                    "길이": r["duration"],
+                                    "일일 속도": f"{int(r['일일 속도']):,}회",
+                                    "이동": f"https://www.youtube.com/watch?v={r['vid']}",
+                                    "ID": r["vid"],
+                                    # 내부 계산용 RAW 값
+                                    "raw_view": r["raw_view"],
+                                    "raw_perf": r["raw_perf"],
+                                    "raw_comment": r["raw_comment"],
+                                    "raw_like": r["raw_like"],
+                                    "raw_engagement": r["raw_engagement"],
+                                }
+                            )
 
-                    display = []
-                    for i, r in enumerate(lst):
-                        display.append(
-                            {
-                                "No": i + 1,
-                                "썸네일": r["thumbnail"],
-                                "채널명": r["channel"],
-                                "제목": r["title"],
-                                "게시일": r["게시일"],
-                                "총 영상 수": f"{r['총 영상 수']:,}개",
-                                "조회수": f"{r['raw_view']:,}",
-                                "성과도": r["raw_perf"],
-                                "등급": r["grade"],
-                                "길이": r["duration"],
-                                "일일 속도": f"{int(r['일일 속도']):,}회",
-                                "이동": f"https://www.youtube.com/watch?v={r['vid']}",
-                                "ID": r["vid"],
-                                # 내부 계산용 RAW 값
-                                "raw_view": r["raw_view"],
-                                "raw_perf": r["raw_perf"],
-                                "raw_comment": r["raw_comment"],
-                                "raw_like": r["raw_like"],
-                                "raw_engagement": r["raw_engagement"],
-                            }
-                        )
+                        st.session_state.df_result = pd.DataFrame(display)
+                        # 🔥 검색이 끝나면 항상 1번(row 0)을 선택
+                        st.session_state.selected_index = 0
 
-                    st.session_state.df_result = pd.DataFrame(display)
-                    st.session_state.selected_index = 0
+            except Exception as e:
+                st.error(f"에러 발생: {e}")
 
-        except Exception as e:
-            st.error(f"에러 발생: {e}")
+    # ---------------------------------------------------------------------
+    # ▶ PREVIEW 렌더링 (항상 맨 위 preview_container 안에 표시)
+    # ---------------------------------------------------------------------
+    with preview_container:
+        df = st.session_state.df_result
+        selected_row = None
+
+        if df is not None and not df.empty:
+            idx = st.session_state.get("selected_index", 0)
+            if idx is None or idx >= len(df):
+                idx = 0
+                st.session_state.selected_index = 0
+            selected_row = df.iloc[idx]
+
+        if selected_row is None:
+            st.info("테이블에서 영상을 선택하거나 검색을 실행하면 여기 미리보기가 표시됩니다.")
+        else:
+            # 네온 스타일 제목
+            st.markdown(
+                f"""
+                <h5 style="
+                    margin: 0 0 4px 0;
+                    color: #7DF9FF;
+                    line-height: 1.4;
+                    font-weight: 600;
+                    text-shadow:
+                        0 0 6px rgba(56, 189, 248, 0.9),
+                        0 0 12px rgba(56, 189, 248, 0.7),
+                        0 0 18px rgba(56, 189, 248, 0.6);
+                ">
+                    {selected_row['제목']}
+                </h5>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            channel_name = selected_row["채널명"]
+            total_videos = selected_row["총 영상 수"]
+            published = selected_row["게시일"]
+            perf_str = f"{selected_row['raw_perf']:,.0f}%"
+            views_str = f"{selected_row['raw_view']:,}"
+            eng_str = f"{float(selected_row['raw_engagement']):.2f}%"
+            url = selected_row["이동"]
+
+            summary_html = f"""
+            <div class="summary-bar">
+                <div class="summary-left">
+                    <span>📺 <b>{channel_name}</b></span>
+                    <span>· 총 {total_videos}</span>
+                    <span>· 📅 {published}</span>
+                </div>
+                <div class="summary-right">
+                    <span class="chip chip-hot">🔥 {perf_str}</span>
+                    <span class="chip chip-view">👁 {views_str}</span>
+                    <span class="chip chip-eng">💬 {eng_str}</span>
+                    <a class="summary-link" href="{url}" target="_blank">유튜브에서 보기</a>
+                </div>
+            </div>
+            """
+            st.markdown(summary_html, unsafe_allow_html=True)
+
+            youtube_embed = f"https://www.youtube.com/embed/{selected_row['ID']}"
+            st.markdown(
+                f"""
+                <div class="video-wrapper">
+                    <iframe
+                        src="{youtube_embed}"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                    </iframe>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
 # -------------------------------------------------------------------------
 # ▶ 메인 영역: 테이블
@@ -516,7 +528,7 @@ st.markdown("### 📊 전체 영상 리스트")
 if df is None or df.empty:
     st.info("검색 결과가 없습니다. 사이드바에서 검색을 실행해주세요.")
 else:
-    # 좋아요 컬럼 추가 (raw_like → 좋아요)
+    # 좋아요 컬럼 추가 (raw_like → 좋아요) - 나중에 쓰고 싶으면 확장
     if "좋아요" not in df.columns and "raw_like" in df.columns:
         df["좋아요"] = df["raw_like"].apply(lambda x: f"{int(x):,}")
 
@@ -539,7 +551,7 @@ else:
             "게시일",
             "총 영상 수",
             "조회수",
-            "좋아요",
+            # "좋아요",  # 필요하면 다시 활성화
             "성과도",
             "등급",
             "길이",
@@ -554,7 +566,6 @@ else:
             "게시일": st.column_config.TextColumn("게시일", width=90),
             "총 영상 수": st.column_config.TextColumn("총 영상 수", width=90),
             "조회수": st.column_config.TextColumn("조회수", width=100),
-            "좋아요": st.column_config.TextColumn("좋아요", width=90),
             "성과도": st.column_config.ProgressColumn(
                 "성과도",
                 format="%.0f%%",
@@ -575,6 +586,7 @@ else:
             "raw_comment": None,
             "raw_like": None,
             "raw_engagement": None,
+            "좋아요": None,  # 일단 테이블에서 숨김 (위에서 사용 시 활성화)
         },
     )
 
