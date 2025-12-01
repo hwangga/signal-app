@@ -40,7 +40,7 @@ st.markdown("""
     /* 사이드바 폭 & 스타일 */
     section[data-testid="stSidebar"] {
         min-width: 420px !important;
-        max-width: 600px !important;
+        max-width: 700px !important;
         background-color: #111827;
         border-right: 1px solid rgba(148, 163, 184, 0.3);
     }
