@@ -233,13 +233,18 @@ if st.session_state.df_result is not None:
         on_select="rerun", selection_mode="single-row"
     )
 
+  # 선택 시 사이드바 업데이트 (여기를 교체하세요!)
     if selection.selection.rows:
         row = df.iloc[selection.selection.rows[0]]
         
         with preview_container:
-            st.image(row['썸네일'], use_container_width=True)
+            # 1. ⭐ 영상 플레이어를 최상단에 배치 (썸네일 대체)
+            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
+
+            # 2. 제목 (영상 바로 아래)
             st.markdown(f"### {row['제목']}")
             
+            # 3. 정보창 (2단 분리)
             col_info_L, col_info_R = st.columns(2)
             with col_info_L:
                 st.metric("성과도", f"{row['raw_perf']:,.0f}%")
@@ -250,8 +255,9 @@ if st.session_state.df_result is not None:
                 st.link_button("🔗 유튜브 이동", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True)
 
             st.divider()
+            # 4. 등급 뱃지
             if "S-Tier" in row['등급']: st.success("🔥 **강력 추천!** (S-Tier)")
             elif "A-Tier" in row['등급']: st.info("👍 **훌륭한 소재** (A-Tier)")
             
-            st.write("🎥 **영상 바로보기**")
-            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
+            # (원래 여기 있던 썸네일과 하단 플레이어 코드는 삭제됨)
+
