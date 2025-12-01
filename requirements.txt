@@ -1,4 +1,5 @@
-streamlit>=1.40.0
+streamlit
 google-api-python-client
 pandas
 isodate
+youtube-transcript-api
