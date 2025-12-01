@@ -117,7 +117,7 @@ with st.form(key='search_form'):
     with c4: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
     with c5: 
         st.caption("국가")
-        country_options = st.pills("국가", ["U+1F1F0 U+1F1F7", "🔴일본", "🟢미국", "🌏전체"], default=["🔵한국"], selection_mode="multi", label_visibility="collapsed")
+        country_options = st.pills("국가", ["🔵한국", "🔴일본", "🟢미국", "🌏전체"], default=["🔵한국"], selection_mode="multi", label_visibility="collapsed")
     with c6:
         st.caption("길이")
         video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
