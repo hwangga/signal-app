@@ -10,91 +10,91 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - YouTube Hunter", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: 다크모드 + 민트/블루 포인트 + 애니메이션]
+# 🌑 [스타일링: 딥 다크 + 네온 민트 포인트 + Red 제거]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     
-    /* 2. 사이드바 디자인 & 상단 여백 대폭 추가 */
+    /* 2. 사이드바 디자인 */
     section[data-testid="stSidebar"] { min-width: 700px !important; }
     [data-testid="stSidebar"] { 
         background-color: #1A1C24; 
         border-right: 1px solid #333; 
         text-align: center; 
     }
-    /* ⭐ 로고 위치를 위해 상단 여백을 8rem으로 넉넉하게 */
-    [data-testid="stSidebar"] .block-container {
-        padding-top: 8rem !important; 
-    }
 
     /* 3. 테이블 스타일 */
     th { background-color: #162447 !important; color: white !important; text-align: center !important; }
     td { vertical-align: middle !important; text-align: center !important; font-size: 15px !important; }
     
-    /* 4. 링크 텍스트 스타일 */
+    /* 4. 링크 스타일 (민트) */
     a { text-decoration: none; color: #00E5FF; font-weight: bold; }
     a:hover { color: #FFFFFF; text-decoration: underline; }
     
     /* 5. 썸네일 이미지 */
     img { border-radius: 6px; }
     
-    /* 6. ⭐ [핵심] 버튼 디자인 (일반 버튼 + 링크 버튼 통합) */
-    /* 빨간색 제거하고 민트 그라데이션 + 애니메이션 적용 */
+    /* =================================================================
+       ⭐ [Red Killer] 빨간색 요소를 민트로 강제 변경하는 구역
+    ================================================================= */
+    
+    /* (1) 버튼 (검색 시작, 유튜브 이동) */
     div.stButton > button, a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
-        border-radius: 8px !important;
-        padding: 0.5rem 1rem !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 6px rgba(0, 198, 255, 0.3) !important;
-        text-decoration: none !important;
-        display: inline-flex !important;
-        justify-content: center !important;
-        align-items: center !important;
+        transition: 0.3s !important;
     }
-    
-    /* 마우스 호버 효과 (커지는 애니메이션) */
     div.stButton > button:hover, a[kind="primary"]:hover {
-        transform: scale(1.02) !important;
-        box-shadow: 0 6px 12px rgba(0, 198, 255, 0.6) !important;
-        color: white !important;
+        transform: scale(1.02);
+        box-shadow: 0 0 15px rgba(0, 198, 255, 0.5);
     }
-    
-    /* 7. ⭐ [Red Killer] 슬라이더, 체크박스, Pills 색상 강제 변경 */
-    
-    /* Pills (알약 버튼) 선택 시 */
-    div[data-testid="stPills"] button[aria-pressed="true"] {
-        background-color: #00E5FF !important;
-        color: black !important;
-        border-color: #00E5FF !important;
-    }
-    
-    /* 슬라이더 바 색상 */
-    div[data-testid="stSlider"] > div > div > div > div {
-        background-color: #00E5FF !important;
-    }
-    
-    /* 체크박스/라디오 선택 색상 */
+
+    /* (2) 라디오 버튼 & 체크박스 선택 시 색상 */
     div[role="radiogroup"] > label > div:first-child {
         background-color: #00E5FF !important;
         border-color: #00E5FF !important;
     }
 
-    /* 8. 사이드바 로고 박스 */
+    /* (3) Pills (알약 버튼) 선택 시 색상 */
+    div[data-testid="stPills"] button[aria-pressed="true"] {
+        background-color: #00E5FF !important;
+        color: black !important;
+        border-color: #00E5FF !important;
+    }
+
+    /* (4) 슬라이더 색상 */
+    div[data-testid="stSlider"] > div > div > div > div {
+        background-color: #00E5FF !important;
+    }
+    
+    /* (5) Expander (검색 옵션 박스) 테두리 및 헤더 색상 */
+    .streamlit-expanderHeader {
+        color: #00E5FF !important; /* 글자색 민트 */
+        font-weight: bold !important;
+    }
+    div[data-testid="stExpander"] {
+        border-color: #30475e !important;
+    }
+
+    /* ================================================================= */
+
+    /* 6. 사이드바 로고 박스 (위치 조정 포함) */
     .sidebar-logo {
         background: linear-gradient(90deg, #0D1117 0%, #161B22 100%);
         padding: 12px;
         border-radius: 8px;
         margin-bottom: 20px;
+        /* ⭐ [핵심] 상단 여백을 여기서 강제로 줍니다 (내려오게) */
+        margin-top: 50px !important; 
         text-align: center;
         border: 1px solid #30363D;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     
-    /* 메트릭 숫자 색상 */
+    /* 7. 메트릭 숫자 색상 */
     [data-testid="stMetricValue"] { font-size: 28px !important; color: #00E5FF !important; font-weight: 700 !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -124,8 +124,7 @@ with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
             api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
 
         c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
-        with c1: 
-            query = st.text_input("키워드", "")
+        with c1: query = st.text_input("키워드", "")
         with c2: max_results = st.selectbox("수집수", [10, 30, 50, 100], index=1)
         with c3: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
         with c4: 
@@ -161,7 +160,7 @@ elif days_filter == "3개월": published_after = (today - timedelta(days=90)).is
 else: published_after = None
 
 api_duration = "any"
-if video_durations and len(video_durations) == 1:
+if len(video_durations) == 1:
     if "쇼츠" in video_durations: api_duration = "short"
     elif "롱폼" in video_durations: api_duration = "long"
 
@@ -333,11 +332,11 @@ if st.session_state.df_result is not None:
             "이동": st.column_config.LinkColumn("이동", display_text="▶", width=60),
             "ID": None, "raw_perf": None, "raw_view": None
         },
-        hide_index=True, use_container_width=False, height=1200, 
+        hide_index=True, use_container_width=True, height=1200, 
         on_select="rerun", selection_mode="single-row"
     )
 
-    # ⭐ [자동 선택] 리스트가 있으면 1번 자동 선택
+    # 자동 선택 로직
     selected_row = None
     if selection.selection.rows:
         selected_row = df.iloc[selection.selection.rows[0]]
@@ -346,14 +345,16 @@ if st.session_state.df_result is not None:
 
     if selected_row is not None:
         with preview_container:
-            # 제목을 가장 위로
+            # 제목을 가장 위로 (여백 추가)
             st.markdown(f"#### {selected_row['제목']}")
+            st.markdown("<br>", unsafe_allow_html=True) # ⭐ [요청 반영] 영상과 제목 사이 띄우기
             
             # 영상 플레이어
             st.video(f"https://www.youtube.com/watch?v={selected_row['ID']}")
             
             st.markdown("---")
             c_meta1, c_meta2 = st.columns(2)
+            # ⭐ [요청 반영] 라벨 친절하게
             with c_meta1: st.caption(f"📺 채널명: {selected_row['채널명']}")
             with c_meta2: st.caption(f"📅 게시날짜: {selected_row['게시일']}")
             
@@ -361,7 +362,6 @@ if st.session_state.df_result is not None:
             with c_stat1: st.metric("성과도", f"{selected_row['raw_perf']:,.0f}%")
             with c_stat2: st.metric("조회수", f"{selected_row['raw_view']:,}")
             
-            # 버튼 디자인 (민트색 적용됨)
             st.markdown("<br>", unsafe_allow_html=True)
             st.link_button("🔗 유튜브에서 보기 (이동)", f"https://www.youtube.com/watch?v={selected_row['ID']}", use_container_width=True, type="primary")
 
