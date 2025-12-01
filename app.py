@@ -56,3 +56,12 @@ else:
 
     if selected.selection.rows:
         st.session_state.selected_index = selected.selection.rows[0]
+        
+# -------------------------------------------------------------------------
+# ▶ 테이블 (전체 리스트)
+# -------------------------------------------------------------------------
+st.markdown("---")
+st.markdown("### 📊 전체 영상 리스트")
+
+df = st.session_state.df_result
+...
