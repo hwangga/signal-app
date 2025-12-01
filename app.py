@@ -10,13 +10,13 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - Insight", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: 민트 테마 + 검색바 초압축]
+# 🌑 [스타일링: 버그 수정 & 디자인 안정화]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     
-    /* 2. 사이드바 디자인 (너비 450px 유지) */
+    /* 2. 사이드바 디자인 */
     section[data-testid="stSidebar"] { min-width: 450px !important; }
     [data-testid="stSidebar"] { 
         background-color: #1A1C24; 
@@ -38,37 +38,38 @@ st.markdown("""
     /* 5. 썸네일 이미지 */
     img { border-radius: 6px; }
     
-    /* 6. 버튼 색상 (민트) */
-    div.stButton > button, a[kind="primary"] {
+    /* 6. ⭐ [버튼 수정] 검색 버튼 색상 강제 적용 (Red Killer) */
+    button[kind="primary"], 
+    div[data-testid="stFormSubmitButton"] > button {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
         box-shadow: 0 4px 6px rgba(0, 198, 255, 0.3) !important;
-        padding: 0px 10px !important; /* 버튼 내부 여백 축소 */
-        height: 38px !important; /* 버튼 높이 강제 축소 */
-        line-height: 1 !important;
+        padding: 0px 10px !important;
+        height: auto !important;
+        min-height: 40px !important;
     }
-    div.stButton > button:hover, a[kind="primary"]:hover {
+    button[kind="primary"]:hover,
+    div[data-testid="stFormSubmitButton"] > button:hover {
         transform: scale(1.02) !important;
         box-shadow: 0 6px 12px rgba(0, 198, 255, 0.5) !important;
     }
 
-    /* Pills & Slider & Checkbox */
+    /* 7. Pills (알약 버튼) 스타일 */
     div[data-testid="stPills"] button[aria-pressed="true"] {
         background-color: #00E5FF !important;
         color: #000000 !important;
         border: 1px solid #00E5FF !important;
+        font-weight: bold !important;
     }
-    div[data-testid="stSlider"] div[data-baseweb="slider"] div {
-        background-color: #00E5FF !important;
+    
+    /* 8. ⭐ [슬라이더 수정] 깨진 디자인 복구 -> 기본 스타일에 포인트만 줌 */
+    div[data-baseweb="slider"] div[role="slider"] {
+        background-color: #00E5FF !important; /* 손잡이만 민트색 */
     }
-    div[role="radiogroup"] > label > div:first-child {
-        background-color: #00E5FF !important;
-        border-color: #00E5FF !important;
-    }
-
-    /* 사이드바 로고 박스 */
+    
+    /* 사이드바 로고 */
     .sidebar-logo {
         background: linear-gradient(135deg, #1e3a8a 0%, #00c6ff 100%);
         padding: 12px;
@@ -85,25 +86,22 @@ st.markdown("""
     /* 메트릭 숫자 */
     [data-testid="stMetricValue"] { font-size: 24px !important; color: #00E5FF !important; font-weight: 700 !important; }
     
-    /* ⭐ [핵심] 검색바(Form) 초압축 CSS */
+    /* 검색바 스타일 */
     [data-testid="stForm"] {
-        padding: 10px 10px !important; /* 박스 내부 여백 최소화 */
+        padding: 15px 20px !important;
         background-color: #151921;
         border: 1px solid #30475e;
-        margin-top: -50px !important; /* 위쪽 제목과의 간격 줄이기 */
+        border-radius: 10px;
     }
+    /* 입력창 라벨 숨김 (깔끔하게) */
+    .stTextInput label, .stSelectbox label { display: none !important; }
     
-    /* 위젯 간 간격 삭제 (다닥다닥 붙이기) */
-    .stElementContainer {
-        margin-bottom: 0px !important;
-        padding-bottom: 5px !important;
+    /* 캡션 스타일 정리 */
+    div[data-testid="stCaptionContainer"] {
+        color: #888888;
+        font-size: 12px;
+        margin-bottom: 5px;
     }
-    
-    /* 입력창 라벨 숨김 & 높이 축소 */
-    .stTextInput label, .stSelectbox label, .stSlider label { display: none !important; }
-    .stTextInput input { min-height: 38px !important; padding: 0px 10px !important; }
-    .stSelectbox div[data-baseweb="select"] > div { min-height: 38px !important; }
-    
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,7 +120,7 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창 - [라벨 제거 & 설명 생략 & 1줄 배치]
+# 1. 상단 (Top) 검색창 - [레이아웃 비율 최적화]
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
@@ -130,23 +128,32 @@ with st.form(key='search_form'):
     if not api_key:
         api_key = st.text_input("API 키", type="password")
 
-    # 1행: 키워드 | 검색 | 수집 | 기간 | 국가 (5개 요소)
-    # 비율: 키워드(2) 검색(0.8) 수집(0.8) 기간(1) 국가(2)
-    c1, c2, c3, c4, c5 = st.columns([2, 0.8, 0.8, 1, 2], vertical_alignment="bottom")
+    # [1행] 키워드 | 검색 | 수집 | 기간 | 국가 (균형 맞춤)
+    c1, c2, c3, c4, c5 = st.columns([1.5, 0.6, 0.7, 0.8, 1.8], vertical_alignment="bottom")
     
     with c1: query = st.text_input("키워드", placeholder="키워드 입력")
     with c2: search_trigger = st.form_submit_button("🚀 검색", type="primary", use_container_width=True)
     with c3: max_results = st.selectbox("수집", [10, 30, 50, 100], index=1)
     with c4: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
-    with c5: country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
+    with c5: 
+        # 국가 (라벨 추가하여 정렬 맞춤)
+        country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
 
-    # 2행: 길이 | 등급 | 구독자 (나머지 필터)
-    # 비율: 길이(1.5) 등급(3.5) 구독자(2)
-    c6, c7, c8 = st.columns([1.5, 3.5, 2], vertical_alignment="center")
+    # [2행] 길이 | 등급 | 구독자 (여유 있게 배치)
+    c6, c7, c8 = st.columns([1.2, 3, 2], vertical_alignment="center")
     
-    with c6: video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
-    with c7: filter_grade = st.pills("등급", ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], default=["🚀 떡상중", "📈 급상승", "👀 주목"], selection_mode="multi", label_visibility="collapsed")
-    with c8: subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
+    with c6:
+        st.caption("⏱️ 길이")
+        video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
+    with c7:
+        st.caption("🏆 등급")
+        filter_grade = st.pills("등급", 
+                                ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
+                                default=["🚀 떡상중", "📈 급상승", "👀 주목"],
+                                selection_mode="multi", label_visibility="collapsed")
+    with c8:
+        st.caption("👤 구독자 범위")
+        subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
 
 # -------------------------------------------------------------------------
 # 2. 로직
@@ -339,7 +346,6 @@ if st.session_state.df_result is not None:
         on_select="rerun", selection_mode="single-row"
     )
 
-    # 1번 자동 선택
     selected_row = None
     if selection.selection.rows:
         selected_row = df.iloc[selection.selection.rows[0]]
