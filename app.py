@@ -21,7 +21,7 @@ CATEGORY_MAP = {
 region_map = {"🔵한국": "KR", "🔴일본": "JP", "🟢미국": "US", "🌏전체": None}
 
 # -------------------------------------------------------------------------
-# 🌑 [스타일링: 사이드바 + 요약바 + 영상 + pills 색상 + 모바일 대응]
+# 🌑 [스타일링: 사이드바 + 요약바 + 영상 + 필터 색상 + 모바일 대응]
 # -------------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -66,16 +66,42 @@ st.markdown("""
         transform: scale(1.02) !important;
     }
 
-    /* Pills(선택된 상태) 색상 변경 */
-    div[data-testid="stPills"] button[aria-pressed="true"] {
-        background: linear-gradient(90deg, #00E5FF, #00B8FF) !important;
-        color: black !important;
-        font-weight: 600 !important;
-        border: 1px solid #89f5ff !important;
-    }
+    /* Pills 기본 모양 */
     div[data-testid="stPills"] button {
         border-radius: 999px !important;
         border: 1px solid rgba(150, 200, 255, 0.3) !important;
+        background-color: rgba(15, 23, 42, 0.9) !important;
+        color: #e5e7eb !important;
+        font-size: 12px !important;
+        padding: 2px 12px !important;
+    }
+
+    /* Pills 선택된 상태 */
+    div[data-testid="stPills"] button[aria-pressed="true"] {
+        background: linear-gradient(90deg, #00E5FF, #22D3EE) !important;
+        color: #020617 !important;
+        font-weight: 600 !important;
+        border: 1px solid #a5f3fc !important;
+        box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+    }
+
+    /* 슬라이더 트랙/핸들 색상 */
+    div[data-baseweb="slider"] > div {
+        background: rgba(56, 189, 248, 0.4) !important;
+    }
+    div[data-baseweb="slider"] div[role="slider"] {
+        background: #00E5FF !important;
+        border: 2px solid #e0faff !important;
+    }
+
+    /* 검색 카드 느낌 (폼) */
+    section[data-testid="stSidebar"] form[data-testid="stForm"] {
+        padding: 12px 16px 18px 16px !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(148, 163, 184, 0.4) !important;
+        background: radial-gradient(circle at top left, rgba(56,189,248,0.18), transparent 55%),
+                    radial-gradient(circle at bottom right, rgba(59,130,246,0.20), transparent 55%),
+                    #020617;
     }
 
     /* PREVIEW 요약줄 */
@@ -180,11 +206,11 @@ api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 # ▶ 사이드바 (PREVIEW + 검색폼)
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # PREVIEW 영역을 위한 placeholder (항상 제일 위)
+    # PREVIEW 영역 placeholder (항상 위)
     preview_container = st.container()
     st.markdown("---")
 
-    # --- 검색 폼 (사이드바 하단) ---
+    # --- 검색 폼 ---
     st.markdown("### 🔍 검색 조건")
 
     with st.form(key="search_form"):
@@ -241,7 +267,7 @@ with st.sidebar:
         )
 
     # ---------------------------------------------------------------------
-    # ▶ 검색 로직 (폼 바로 아래에서 처리)
+    # ▶ 검색 로직
     # ---------------------------------------------------------------------
     now = datetime.now()
 
@@ -456,7 +482,7 @@ with st.sidebar:
                 st.error(f"에러 발생: {e}")
 
     # ---------------------------------------------------------------------
-    # ▶ PREVIEW 렌더링 (항상 맨 위 preview_container 안에 표시)
+    # ▶ PREVIEW 렌더링 (항상 맨 위 preview_container 안에서)
     # ---------------------------------------------------------------------
     with preview_container:
         df = st.session_state.df_result
