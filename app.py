@@ -10,61 +10,50 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - YouTube Hunter", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: 붉은색 제거 & 민트 테마 강제 적용]
+# 🌑 [스타일링: 다크모드 + 민트/블루 포인트]
 st.markdown("""
 <style>
-    /* 1. 전체 배경 */
+    /* 전체 테마 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
     
-    /* 2. 사이드바 디자인 & 상단 여백 */
+    /* 사이드바 강제 확장 & 디자인 */
     section[data-testid="stSidebar"] { min-width: 700px !important; }
     [data-testid="stSidebar"] { 
         background-color: #1A1C24; 
         border-right: 1px solid #333; 
         text-align: center; 
     }
-    /* ⭐ 로고 강제로 내리기 (상단 여백) */
+    
+    /* ⭐ [요청 반영] 사이드바 상단 여백 추가 (답답하지 않게) */
     [data-testid="stSidebar"] .block-container {
-        padding-top: 5rem !important; 
+        padding-top: 3rem; 
     }
-
-    /* 3. 테이블 스타일 */
+    
+    /* 테이블 스타일 */
     th { background-color: #162447 !important; color: white !important; text-align: center !important; }
     td { vertical-align: middle !important; text-align: center !important; font-size: 15px !important; }
     
-    /* 4. 링크 스타일 */
+    /* 링크 텍스트 스타일 (밝은 민트) */
     a { text-decoration: none; color: #00E5FF; font-weight: bold; }
     a:hover { color: #FFFFFF; text-decoration: underline; }
     
-    /* 5. 썸네일 이미지 */
+    /* 썸네일 이미지 */
     img { border-radius: 6px; }
     
-    /* 6. ⭐ [핵심] 모든 버튼 및 선택 강조색을 민트로 강제 변경 (Red 제거) */
-    
-    /* 메인 검색 버튼 */
+    /* ⭐ [요청 반영] 버튼 색상 변경 (빨강 -> 민트/블루 그라데이션) */
     div.stButton > button, a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
+        transition: 0.3s !important;
+        box-shadow: 0 4px 6px rgba(0, 198, 255, 0.3);
     }
-    div.stButton > button:hover {
+    div.stButton > button:hover, a[kind="primary"]:hover {
         transform: scale(1.02);
-        box-shadow: 0 0 15px rgba(0, 198, 255, 0.5);
-    }
-
-    /* Pills (알약 버튼) 선택 시 색상 */
-    div[data-testid="stPills"] button[aria-pressed="true"] {
-        background-color: #00E5FF !important;
-        color: black !important;
-        border-color: #00E5FF !important;
+        box-shadow: 0 6px 10px rgba(0, 198, 255, 0.5);
     }
     
-    /* 슬라이더 색상 */
-    div[data-testid="stSlider"] > div > div > div > div {
-        background-color: #00E5FF !important;
-    }
-
     /* 사이드바 로고 박스 */
     .sidebar-logo {
         background: linear-gradient(90deg, #0D1117 0%, #161B22 100%);
@@ -76,7 +65,7 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     
-    /* 메트릭 숫자 색상 */
+    /* 메트릭 숫자 색상 (민트색) */
     [data-testid="stMetricValue"] { font-size: 28px !important; color: #00E5FF !important; font-weight: 700 !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -103,34 +92,27 @@ api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
     with st.form(key='search_form'):
         if not api_key:
-            api_key = st.text_input("API 키 입력", type="password")
+            api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
 
         c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
-        with c1: query = st.text_input("키워드", "")
+        with c1: 
+            # ⭐ 텍스트 변경: 검색어 (엔터!) -> 키워드
+            query = st.text_input("키워드", "")
         with c2: max_results = st.selectbox("수집수", [10, 30, 50, 100], index=1)
         with c3: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
         with c4: 
-            # ⭐ 국가: Dropdown 대신 Pills (알약 버튼) 적용 - 옵션 바로 보임
-            st.caption("국가 (복수선택)")
-            country_options = st.pills("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], default=["🇰🇷 한국"], selection_mode="multi", label_visibility="collapsed")
+            country_options = st.multiselect("국가 (복수선택)", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], default=["🇰🇷 한국"])
             
         c5, c6, c7 = st.columns([1, 2, 2])
         with c5: 
-            # ⭐ 길이: Pills 적용
-            st.caption("길이")
-            video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
+            video_durations = st.multiselect("길이", ["쇼츠", "롱폼"], default=["쇼츠"])
         with c6: 
-            # ⭐ 등급: Pills 적용 (공간 활용 위해 이모지만 사용하거나 짧게)
-            st.caption("등급 필터")
-            filter_grade = st.pills("등급", 
-                                    ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
-                                    default=["🚀 떡상중", "📈 급상승", "👀 주목"],
-                                    selection_mode="multi", label_visibility="collapsed")
-        with c7: 
-            st.caption("구독자 범위")
-            subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
+            # ⭐ [요청 반영] 등급 명칭 변경 (이모지 버전)
+            filter_grade = st.multiselect("등급 필터", 
+                                          ["🚀 떡상중 (1000%↑)", "📈 급상승 (300%↑)", "👀 주목 (100%↑)", "💤 일반"], 
+                                          default=["🚀 떡상중 (1000%↑)", "📈 급상승 (300%↑)", "👀 주목 (100%↑)"])
+        with c7: subs_range = st.slider("구독자 범위", 0, 1000000, (0, 1000000), 1000)
 
-        st.markdown("<br>", unsafe_allow_html=True)
         search_trigger = st.form_submit_button("🚀 SIGNAL 감지 시작", type="primary", use_container_width=True)
 
 # -------------------------------------------------------------------------
@@ -145,7 +127,7 @@ elif days_filter == "3개월": published_after = (today - timedelta(days=90)).is
 else: published_after = None
 
 api_duration = "any"
-if video_durations and len(video_durations) == 1:
+if len(video_durations) == 1:
     if "쇼츠" in video_durations: api_duration = "short"
     elif "롱폼" in video_durations: api_duration = "long"
 
@@ -165,7 +147,7 @@ if search_trigger:
                 target_countries = [region_map[c] for c in country_options] if country_options else [None]
                 
                 for region_code in target_countries:
-                    per_country_max = max(10, int(max_results / len(target_countries))) if target_countries else max_results
+                    per_country_max = max(10, int(max_results / len(target_countries)))
                     
                     search_request = youtube.search().list(
                         part="snippet", q=query, maxResults=per_country_max, order="viewCount", type="video", 
@@ -180,6 +162,7 @@ if search_trigger:
                     st.error("신호 없음 (검색 결과 0건)")
                     st.session_state.df_result = pd.DataFrame()
                 else:
+                    # 50개씩 끊어서 요청 (API 제한 대응)
                     chunks = [all_video_ids[i:i + 50] for i in range(0, len(all_video_ids), 50)]
                     items = []
                     for chunk in chunks:
@@ -206,6 +189,7 @@ if search_trigger:
                         sub_count = subs_map.get(item['snippet']['channelId'], 0)
                         perf = (view_count / sub_count * 100) if sub_count > 0 else 0
                         
+                        # ⭐ 등급 명칭 변경 (이모지 버전)
                         if perf >= 1000: grade = "🚀 떡상중 (1000%↑)"
                         elif perf >= 300: grade = "📈 급상승 (300%↑)"
                         elif perf >= 100: grade = "👀 주목 (100%↑)"
@@ -216,7 +200,7 @@ if search_trigger:
                         grade_simple = grade.split(" (")[0]
                         pass_grade = False
                         for f in filter_grade:
-                            if grade_simple in f: # "🚀 떡상중" 문자열 포함 여부 확인
+                            if grade_simple in f:
                                 pass_grade = True
                                 break
                         if not pass_grade: continue
@@ -294,6 +278,7 @@ if st.session_state.df_result is not None:
     df = st.session_state.df_result
     st.success(f"신호 포착 완료! {len(df)}건")
     
+    # 성과도 상대평가 기준
     max_perf_val = df['raw_perf'].max()
     if max_perf_val == 0 or pd.isna(max_perf_val): max_perf_val = 1000
 
@@ -317,35 +302,35 @@ if st.session_state.df_result is not None:
             "이동": st.column_config.LinkColumn("이동", display_text="▶", width=60),
             "ID": None, "raw_perf": None, "raw_view": None
         },
-        hide_index=True, use_container_width=True, height=1200, 
+        hide_index=True, use_container_width=False, height=1200, 
         on_select="rerun", selection_mode="single-row"
     )
 
-    # ⭐ [핵심] 자동 선택 로직 (클릭 안 해도 1번 보여주기)
-    selected_row = None
     if selection.selection.rows:
-        selected_row = df.iloc[selection.selection.rows[0]]
-    elif not df.empty:
-        selected_row = df.iloc[0] # 아무것도 선택 안 했으면 1번(0번째) 자동 선택
-
-    if selected_row is not None:
+        row = df.iloc[selection.selection.rows[0]]
+        
         with preview_container:
-            st.video(f"https://www.youtube.com/watch?v={selected_row['ID']}")
-            st.markdown(f"#### {selected_row['제목']}")
+            # 1. 제목 (가장 위)
+            st.markdown(f"#### {row['제목']}")
             
+            # 2. 영상 플레이어 (제목 아래)
+            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
+            
+            # 3. 층별 정보
             st.markdown("---")
             c_meta1, c_meta2 = st.columns(2)
-            with c_meta1: st.caption(f"📺 채널명: {selected_row['채널명']}")
-            with c_meta2: st.caption(f"📅 게시날짜: {selected_row['게시일']}")
+            # ⭐ [요청 반영] 라벨 추가
+            with c_meta1: st.caption(f"📺 채널명: {row['채널명']}")
+            with c_meta2: st.caption(f"📅 게시날짜: {row['게시일']}")
             
             c_stat1, c_stat2 = st.columns(2)
-            with c_stat1: st.metric("성과도", f"{selected_row['raw_perf']:,.0f}%")
-            with c_stat2: st.metric("조회수", f"{selected_row['raw_view']:,}")
+            with c_stat1: st.metric("성과도", f"{row['raw_perf']:,.0f}%")
+            with c_stat2: st.metric("조회수", f"{row['raw_view']:,}")
             
             st.markdown("<br>", unsafe_allow_html=True)
-            st.link_button("🔗 유튜브에서 보기", f"https://www.youtube.com/watch?v={selected_row['ID']}", use_container_width=True, type="primary")
+            st.link_button("🔗 유튜브에서 보기", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True, type="primary")
 
             st.divider()
-            if "떡상중" in selected_row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
-            elif "급상승" in selected_row['등급']: st.info("👍 **급상승 (300%↑)**")
-            elif "주목" in selected_row['등급']: st.warning("🟢 **주목 (100%↑)**")
+            if "떡상중" in row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
+            elif "급상승" in row['등급']: st.info("👍 **급상승 (300%↑)**")
+            elif "주목" in row['등급']: st.warning("🟢 **주목 (100%↑)**")
