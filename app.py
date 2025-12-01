@@ -10,7 +10,7 @@ import pandas as pd
 
 st.set_page_config(page_title="SIGNAL - YouTube Hunter", layout="wide", page_icon="📡")
 
-# 🌑 [스타일링: Red Killer Ultimate - 태그 색상까지 변경]
+# 🌑 [스타일링: Red Killer V5 - Pills 색상 강제 변경 & 물리적 여백]
 st.markdown("""
 <style>
     /* 1. 전체 배경 */
@@ -22,10 +22,6 @@ st.markdown("""
         background-color: #1A1C24; 
         border-right: 1px solid #333; 
         text-align: center; 
-    }
-    /* 로고 위치 확보를 위한 물리적 여백 */
-    [data-testid="stSidebar"] .block-container {
-        padding-top: 5rem !important; 
     }
 
     /* 3. 테이블 스타일 */
@@ -40,43 +36,45 @@ st.markdown("""
     img { border-radius: 6px; }
     
     /* =================================================================
-       ⭐ [Red Killer Ultimate] 빨간색 요소를 민트로 강제 변경
+       ⭐ [Red Killer] 민트색 강제 적용 구역
     ================================================================= */
     
     /* (1) 버튼 (검색, 이동) */
-    div.stButton > button, a[kind="primary"] {
+    div.stButton > button, 
+    a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
         box-shadow: 0 4px 6px rgba(0, 198, 255, 0.3) !important;
     }
-    div.stButton > button:hover, a[kind="primary"]:hover {
+    div.stButton > button:hover, 
+    a[kind="primary"]:hover {
         transform: scale(1.02) !important;
-        box-shadow: 0 6px 15px rgba(0, 198, 255, 0.5) !important;
+        box-shadow: 0 6px 12px rgba(0, 198, 255, 0.5) !important;
+        color: white !important;
     }
 
-    /* (2) ⭐ 멀티셀렉트 태그 (쇼츠 x, 한국 x 등) 색상 변경 */
-    span[data-baseweb="tag"] {
-        background-color: #00E5FF !important; /* 민트색 배경 */
-        color: black !important; /* 검은 글씨 */
-    }
-    span[data-baseweb="tag"] i {
-        color: black !important; /* X 아이콘 검은색 */
-    }
-
-    /* (3) Pills (알약 버튼) 선택 시 */
+    /* (2) Pills (알약 버튼 - 길이, 국가, 등급) 선택 시 색상 */
+    /* 빨간색을 죽이고 민트색 배경 + 검은 글씨 */
     div[data-testid="stPills"] button[aria-pressed="true"] {
         background-color: #00E5FF !important;
         color: black !important;
         border: 1px solid #00E5FF !important;
+        font-weight: bold !important;
+    }
+    /* 마우스 올렸을 때 */
+    div[data-testid="stPills"] button:hover {
+        border-color: #00E5FF !important;
+        color: #00E5FF !important;
     }
 
-    /* (4) 슬라이더, 라디오 버튼 */
-    div[data-testid="stSlider"] div[data-baseweb="slider"] div { background-color: #00E5FF !important; }
-    div[role="radiogroup"] > label > div:first-child {
-        background-color: #00E5FF !important; border-color: #00E5FF !important;
+    /* (3) 슬라이더 바 색상 */
+    div[data-testid="stSlider"] div[data-baseweb="slider"] div {
+        background-color: #00E5FF !important;
     }
+    
+    /* ================================================================= */
 
     /* 6. 사이드바 로고 박스 */
     .sidebar-logo {
@@ -89,7 +87,7 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     
-    /* 7. 메트릭 숫자 */
+    /* 7. 메트릭 숫자 색상 */
     [data-testid="stMetricValue"] { font-size: 28px !important; color: #00E5FF !important; font-weight: 700 !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -109,37 +107,45 @@ def parse_duration(d):
     except: return d
 
 # -------------------------------------------------------------------------
-# 1. 상단 (Top) 검색창
+# 1. 상단 (Top) 검색창 - [레이아웃 개선: 옵션이 잘 보이게 배치]
 # -------------------------------------------------------------------------
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
 with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
     with st.form(key='search_form'):
         if not api_key:
-            api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
+            api_key = st.text_input("API 키 입력", type="password")
 
-        c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
+        # 1행: 키워드, 수집수, 기간 (기존 유지)
+        c1, c2, c3 = st.columns([2, 1, 1])
         with c1: query = st.text_input("키워드", "")
         with c2: max_results = st.selectbox("수집수", [10, 30, 50, 100], index=1)
         with c3: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
+
+        st.markdown("<hr style='margin: 10px 0; border-color: #333;'>", unsafe_allow_html=True)
+
+        # 2행: 국가, 길이 (Pills 적용 - 펼쳐서 보여주기)
+        c4, c5 = st.columns(2)
         with c4: 
-            # ⭐ 국가: 국기 아이콘 적용
-            st.caption("국가 (복수선택)")
-            country_options = st.multiselect("국가", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], default=["🇰🇷 한국"], label_visibility="collapsed")
-            
-        c5, c6, c7 = st.columns([1, 2, 2])
+            st.caption("🌍 국가 (복수선택)")
+            # ⭐ [수정] 텍스트 없이 국기 아이콘만 사용
+            country_options = st.pills("국가", ["🇰🇷", "🇯🇵", "🇺🇸", "🌏"], default=["🇰🇷"], selection_mode="multi", label_visibility="collapsed")
         with c5: 
-            st.caption("길이")
+            st.caption("⏱️ 길이")
+            # ⭐ [수정] Pills 사용 (빨간색 -> 민트색 CSS 적용됨)
             video_durations = st.pills("길이", ["쇼츠", "롱폼"], default=["쇼츠"], selection_mode="multi", label_visibility="collapsed")
+
+        # 3행: 등급, 구독자
+        c6, c7 = st.columns([2, 1])
         with c6: 
-            st.caption("등급 필터")
-            # ⭐ 빨간 태그 제거를 위해 CSS 적용됨
-            filter_grade = st.multiselect("등급", 
-                                          ["🚀 떡상중 (1000%↑)", "📈 급상승 (300%↑)", "👀 주목 (100%↑)", "💤 일반"], 
-                                          default=["🚀 떡상중 (1000%↑)", "📈 급상승 (300%↑)", "👀 주목 (100%↑)"],
-                                          label_visibility="collapsed")
+            st.caption("🏆 등급 필터")
+            # ⭐ [수정] Pills 사용 (드롭다운 아님!)
+            filter_grade = st.pills("등급", 
+                                    ["🚀 떡상중", "📈 급상승", "👀 주목", "💤 일반"], 
+                                    default=["🚀 떡상중", "📈 급상승", "👀 주목"],
+                                    selection_mode="multi", label_visibility="collapsed")
         with c7: 
-            st.caption("구독자 범위")
+            st.caption("👤 구독자 범위")
             subs_range = st.slider("구독자", 0, 1000000, (0, 1000000), 1000, label_visibility="collapsed")
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -161,8 +167,8 @@ if video_durations and len(video_durations) == 1:
     if "쇼츠" in video_durations: api_duration = "short"
     elif "롱폼" in video_durations: api_duration = "long"
 
-# ⭐ 국기 -> 코드 매핑
-region_map = {"🇰🇷 한국": "KR", "🇯🇵 일본": "JP", "🇺🇸 미국": "US", "🌏 전세계": None}
+# ⭐ [수정] 국기 -> 코드 매핑 (아이콘만 있음)
+region_map = {"🇰🇷": "KR", "🇯🇵": "JP", "🇺🇸": "US", "🌏": None}
 
 if search_trigger:
     if not query:
@@ -284,7 +290,9 @@ if search_trigger:
 # 3. 화면 출력
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # 로고 박스
+    # ⭐ [요청 반영] 물리적 여백 (투명 박스) - 로고를 아래로 밈
+    st.markdown('<div style="height: 100px;"></div>', unsafe_allow_html=True)
+    
     st.markdown("""
         <div class="sidebar-logo">
             <h3 style='margin:0; color: #E0E0E0; font-size: 20px;'>📡 SIGNAL PREVIEW</h3>
@@ -315,7 +323,7 @@ if st.session_state.df_result is not None:
         df,
         column_order=("No", "썸네일", "채널명", "제목", "게시일", "구독자", "조회수", "성과도", "등급", "길이", "댓글", "좋아요", "참여율", "이동"),
         column_config={
-            "No": st.column_config.TextColumn("순번", width=60), # ⭐ [요청 반영] No -> 순번
+            "No": st.column_config.TextColumn("No", width=60),
             "썸네일": st.column_config.ImageColumn("썸네일", width=105),
             "채널명": st.column_config.TextColumn("채널명", width=180),
             "제목": st.column_config.TextColumn("제목", width=500),
@@ -344,11 +352,9 @@ if st.session_state.df_result is not None:
 
     if selected_row is not None:
         with preview_container:
-            # ⭐ [요청 반영] 제목을 가장 위로!
             st.markdown(f"#### {selected_row['제목']}")
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # 그 다음 영상
             st.video(f"https://www.youtube.com/watch?v={selected_row['ID']}")
             
             st.markdown("---")
