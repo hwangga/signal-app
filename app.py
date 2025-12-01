@@ -22,7 +22,11 @@ st.markdown("""
         background-color: #1A1C24; 
         border-right: 1px solid #333; 
         text-align: center; 
-        padding-top: 2rem;
+    }
+    
+    /* ⭐ [요청 반영] 사이드바 상단 여백 추가 (답답하지 않게) */
+    [data-testid="stSidebar"] .block-container {
+        padding-top: 3rem; 
     }
     
     /* 테이블 스타일 */
@@ -36,7 +40,7 @@ st.markdown("""
     /* 썸네일 이미지 */
     img { border-radius: 6px; }
     
-    /* 버튼 색상 변경 (민트/블루 그라데이션) */
+    /* ⭐ [요청 반영] 버튼 색상 변경 (빨강 -> 민트/블루 그라데이션) */
     div.stButton > button, a[kind="primary"] {
         background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%) !important;
         color: white !important;
@@ -91,20 +95,22 @@ with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
             api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
 
         c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
-        with c1: query = st.text_input("키워드", "")
+        with c1: 
+            # ⭐ 텍스트 변경: 검색어 (엔터!) -> 키워드
+            query = st.text_input("키워드", "")
         with c2: max_results = st.selectbox("수집수", [10, 30, 50, 100], index=1)
         with c3: days_filter = st.selectbox("기간", ["1주일", "1개월", "3개월", "전체"], index=1)
         with c4: 
-            country_options = st.multiselect("국가 (복수선택 가능)", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], default=["🇰🇷 한국"])
+            country_options = st.multiselect("국가 (복수선택)", ["🇰🇷 한국", "🇯🇵 일본", "🇺🇸 미국", "🌏 전세계"], default=["🇰🇷 한국"])
             
         c5, c6, c7 = st.columns([1, 2, 2])
         with c5: 
             video_durations = st.multiselect("길이", ["쇼츠", "롱폼"], default=["쇼츠"])
         with c6: 
-            # ⭐ [수정 완료] 등급 명칭 S-Tier 형태로 복귀
+            # ⭐ [요청 반영] 등급 명칭 변경 (이모지 버전)
             filter_grade = st.multiselect("등급 필터", 
-                                          ["🟣 S-Tier (최상위)", "🔴 A-Tier (초대박)", "🟢 B-Tier (우수)", "⚪ Normal (일반)"], 
-                                          default=["🟣 S-Tier (최상위)", "🔴 A-Tier (초대박)", "🟢 B-Tier (우수)"])
+                                          ["🚀 떡상중 (1000%↑)", "📈 급상승 (300%↑)", "👀 주목 (100%↑)", "💤 일반"], 
+                                          default=["🚀 떡상중 (1000%↑)", "📈 급상승 (300%↑)", "👀 주목 (100%↑)"])
         with c7: subs_range = st.slider("구독자 범위", 0, 1000000, (0, 1000000), 1000)
 
         search_trigger = st.form_submit_button("🚀 SIGNAL 감지 시작", type="primary", use_container_width=True)
@@ -156,6 +162,7 @@ if search_trigger:
                     st.error("신호 없음 (검색 결과 0건)")
                     st.session_state.df_result = pd.DataFrame()
                 else:
+                    # 50개씩 끊어서 요청 (API 제한 대응)
                     chunks = [all_video_ids[i:i + 50] for i in range(0, len(all_video_ids), 50)]
                     items = []
                     for chunk in chunks:
@@ -182,15 +189,15 @@ if search_trigger:
                         sub_count = subs_map.get(item['snippet']['channelId'], 0)
                         perf = (view_count / sub_count * 100) if sub_count > 0 else 0
                         
-                        # ⭐ [수정 완료] 등급 명칭 S-Tier (최상위) 등
-                        if perf >= 1000: grade = "🟣 S-Tier (최상위)"
-                        elif perf >= 300: grade = "🔴 A-Tier (초대박)"
-                        elif perf >= 100: grade = "🟢 B-Tier (우수)"
-                        else: grade = "⚪ Normal (일반)"
+                        # ⭐ 등급 명칭 변경 (이모지 버전)
+                        if perf >= 1000: grade = "🚀 떡상중 (1000%↑)"
+                        elif perf >= 300: grade = "📈 급상승 (300%↑)"
+                        elif perf >= 100: grade = "👀 주목 (100%↑)"
+                        else: grade = "💤 일반"
 
                         if not (subs_range[0] <= sub_count <= subs_range[1]): continue
                         
-                        grade_simple = grade.split(" (")[0] # "🟣 S-Tier"
+                        grade_simple = grade.split(" (")[0]
                         pass_grade = False
                         for f in filter_grade:
                             if grade_simple in f:
@@ -262,7 +269,7 @@ with st.sidebar:
         st.markdown("### 📊 전체 요약")
         m1, m2 = st.columns(2)
         m1.metric("총 조회수", f"{df['raw_view'].sum():,}")
-        m2.metric("S-Tier", f"{len(df[df['등급'].str.contains('S-Tier')])}개")
+        m2.metric("떡상중", f"{len(df[df['등급'].str.contains('떡상중')])}개")
         st.info("📌 리스트에서 영상을 선택하세요.")
     else:
         st.info("검색을 시작해주세요.")
@@ -271,7 +278,7 @@ if st.session_state.df_result is not None:
     df = st.session_state.df_result
     st.success(f"신호 포착 완료! {len(df)}건")
     
-    # 성과도 상대평가 기준 (최대값)
+    # 성과도 상대평가 기준
     max_perf_val = df['raw_perf'].max()
     if max_perf_val == 0 or pd.isna(max_perf_val): max_perf_val = 1000
 
@@ -303,13 +310,18 @@ if st.session_state.df_result is not None:
         row = df.iloc[selection.selection.rows[0]]
         
         with preview_container:
-            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
+            # 1. 제목 (가장 위)
             st.markdown(f"#### {row['제목']}")
             
+            # 2. 영상 플레이어 (제목 아래)
+            st.video(f"https://www.youtube.com/watch?v={row['ID']}")
+            
+            # 3. 층별 정보
             st.markdown("---")
             c_meta1, c_meta2 = st.columns(2)
-            with c_meta1: st.caption(f"📺 {row['채널명']}")
-            with c_meta2: st.caption(f"📅 {row['게시일']}")
+            # ⭐ [요청 반영] 라벨 추가
+            with c_meta1: st.caption(f"📺 채널명: {row['채널명']}")
+            with c_meta2: st.caption(f"📅 게시날짜: {row['게시일']}")
             
             c_stat1, c_stat2 = st.columns(2)
             with c_stat1: st.metric("성과도", f"{row['raw_perf']:,.0f}%")
@@ -319,6 +331,6 @@ if st.session_state.df_result is not None:
             st.link_button("🔗 유튜브에서 보기", f"https://www.youtube.com/watch?v={row['ID']}", use_container_width=True, type="primary")
 
             st.divider()
-            if "S-Tier" in row['등급']: st.success("🔥 **S-Tier (최상위)**")
-            elif "A-Tier" in row['등급']: st.info("👍 **A-Tier (초대박)**")
-            elif "B-Tier" in row['등급']: st.warning("🟢 **B-Tier (우수)**")
+            if "떡상중" in row['등급']: st.success("🔥 **떡상중 (1000%↑)**")
+            elif "급상승" in row['등급']: st.info("👍 **급상승 (300%↑)**")
+            elif "주목" in row['등급']: st.warning("🟢 **주목 (100%↑)**")
