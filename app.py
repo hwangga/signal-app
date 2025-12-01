@@ -21,7 +21,7 @@ CATEGORY_MAP = {
 region_map = {"🔵한국": "KR", "🔴일본": "JP", "🟢미국": "US", "🌏전체": None}
 
 # -------------------------------------------------------------------------
-# 🌑 [스타일링: 사이드바 + 요약바 + 영상 + 모바일 대응]
+# 🌑 [스타일링: 사이드바 + 요약바 + 영상 + pills 색상 + 모바일 대응]
 # -------------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -66,6 +66,18 @@ st.markdown("""
         transform: scale(1.02) !important;
     }
 
+    /* Pills(선택된 상태) 색상 변경 */
+    div[data-testid="stPills"] button[aria-pressed="true"] {
+        background: linear-gradient(90deg, #00E5FF, #00B8FF) !important;
+        color: black !important;
+        font-weight: 600 !important;
+        border: 1px solid #89f5ff !important;
+    }
+    div[data-testid="stPills"] button {
+        border-radius: 999px !important;
+        border: 1px solid rgba(150, 200, 255, 0.3) !important;
+    }
+
     /* PREVIEW 요약줄 */
     .summary-bar {
         display: flex;
@@ -102,6 +114,7 @@ st.markdown("""
     .chip-hot { border-color: #fb7185; }
     .chip-view { border-color: #60a5fa; }
     .chip-eng { border-color: #34d399; }
+    .chip-like { border-color: #facc15; }
 
     .summary-link {
         padding: 2px 10px;
@@ -167,7 +180,7 @@ api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 # ▶ 사이드바 (PREVIEW + 검색폼)
 # -------------------------------------------------------------------------
 with st.sidebar:
-    # 미리보기 영역을 위한 placeholder (위쪽에 위치)
+    # PREVIEW 영역을 위한 placeholder (항상 제일 위)
     preview_container = st.container()
     st.markdown("---")
 
@@ -299,7 +312,7 @@ with st.sidebar:
                         # 1) 비디오 상세 정보
                         video_items = []
                         chunks = [
-                            all_video_ids[i : i + 50]
+                            all_video_ids[i: i + 50]
                             for i in range(0, len(all_video_ids), 50)
                         ]
                         for c in chunks:
@@ -320,7 +333,7 @@ with st.sidebar:
                         subs_map, video_count_map = {}, {}
 
                         ch_chunks = [
-                            channel_ids[i : i + 50]
+                            channel_ids[i: i + 50]
                             for i in range(0, len(channel_ids), 50)
                         ]
                         for cc in ch_chunks:
@@ -459,27 +472,25 @@ with st.sidebar:
         if selected_row is None:
             st.info("테이블에서 영상을 선택하거나 검색을 실행하면 여기 미리보기가 표시됩니다.")
         else:
-            # 네온 스타일 제목
+            # 네온 스타일 h2 제목 (가운데 정렬)
             st.markdown(
-    f"""
-    <h2 style="
-        margin: 4px 0 10px 0;
-        color: #7DF9FF;
-        line-height: 1.4;
-        font-weight: 700;
-        text-align: center;
-        text-shadow:
-            0 0 6px rgba(56, 189, 248, 0.9),
-            0 0 12px rgba(56, 189, 248, 0.7),
-            0 0 20px rgba(56, 189, 248, 0.8),
-            0 0 26px rgba(56, 189, 248, 0.7);
-    ">
-        {selected_row['제목']}
-    </h2>
-    """,
-    unsafe_allow_html=True,
-)
-
+                f"""
+                <h2 style="
+                    margin: 4px 0 12px 0;
+                    color: #7DF9FF;
+                    line-height: 1.4;
+                    font-weight: 700;
+                    text-align: center;
+                    text-shadow:
+                        0 0 6px rgba(56, 189, 248, 0.9),
+                        0 0 14px rgba(56, 189, 248, 0.8),
+                        0 0 24px rgba(56, 189, 248, 0.7);
+                ">
+                    {selected_row['제목']}
+                </h2>
+                """,
+                unsafe_allow_html=True,
+            )
 
             channel_name = selected_row["채널명"]
             total_videos = selected_row["총 영상 수"]
@@ -487,6 +498,7 @@ with st.sidebar:
             perf_str = f"{selected_row['raw_perf']:,.0f}%"
             views_str = f"{selected_row['raw_view']:,}"
             eng_str = f"{float(selected_row['raw_engagement']):.2f}%"
+            likes_str = f"{int(selected_row['raw_like']):,}"
             url = selected_row["이동"]
 
             summary_html = f"""
@@ -499,6 +511,7 @@ with st.sidebar:
                 <div class="summary-right">
                     <span class="chip chip-hot">🔥 {perf_str}</span>
                     <span class="chip chip-view">👁 {views_str}</span>
+                    <span class="chip chip-like">👍 {likes_str}</span>
                     <span class="chip chip-eng">💬 {eng_str}</span>
                     <a class="summary-link" href="{url}" target="_blank">유튜브에서 보기</a>
                 </div>
@@ -531,7 +544,7 @@ st.markdown("### 📊 전체 영상 리스트")
 if df is None or df.empty:
     st.info("검색 결과가 없습니다. 사이드바에서 검색을 실행해주세요.")
 else:
-    # 좋아요 컬럼 추가 (raw_like → 좋아요) - 나중에 쓰고 싶으면 확장
+    # 좋아요 컬럼 추가 (raw_like → 좋아요 표시용)
     if "좋아요" not in df.columns and "raw_like" in df.columns:
         df["좋아요"] = df["raw_like"].apply(lambda x: f"{int(x):,}")
 
@@ -554,7 +567,7 @@ else:
             "게시일",
             "총 영상 수",
             "조회수",
-            # "좋아요",  # 필요하면 다시 활성화
+            "좋아요",
             "성과도",
             "등급",
             "길이",
@@ -569,6 +582,7 @@ else:
             "게시일": st.column_config.TextColumn("게시일", width=90),
             "총 영상 수": st.column_config.TextColumn("총 영상 수", width=90),
             "조회수": st.column_config.TextColumn("조회수", width=100),
+            "좋아요": st.column_config.TextColumn("좋아요", width=90),
             "성과도": st.column_config.ProgressColumn(
                 "성과도",
                 format="%.0f%%",
@@ -589,7 +603,6 @@ else:
             "raw_comment": None,
             "raw_like": None,
             "raw_engagement": None,
-            "좋아요": None,  # 일단 테이블에서 숨김 (위에서 사용 시 활성화)
         },
     )
 
