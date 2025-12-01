@@ -7,7 +7,6 @@ import pandas as pd
 # ==========================================
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
 # ==========================================
-
 st.set_page_config(page_title="SIGNAL - Insight", layout="wide", page_icon="📡")
 
 # -------------------------------------------------------------------------
@@ -22,11 +21,20 @@ CATEGORY_MAP = {
 region_map = {"🔵한국": "KR", "🔴일본": "JP", "🟢미국": "US", "🌏전체": None}
 
 # -------------------------------------------------------------------------
-# 🌑 [스타일링: PREVIEW 요약줄 + 영상 축소 + 모바일 대응]
+# 🌑 [스타일링: 요약바 + 상단 패딩 감소 + 모바일 대응]
 # -------------------------------------------------------------------------
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117; color: #FAFAFA; }
+
+    /* 메인 영역 상단 패딩 줄이기 */
+    .block-container {
+        padding-top: 0.5rem !important;
+    }
+    h1 {
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.8rem !important;
+    }
 
     /* 입력/버튼 높이 통일 */
     div.stSelectbox > div,
@@ -53,34 +61,54 @@ st.markdown("""
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        margin: 8px 0 12px 0;
+        margin: 4px 0 10px 0;
         border-radius: 12px;
-        background: rgba(30, 41, 59, 0.6);
-        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.4);
         font-size: 13px;
+    }
+    .summary-left {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+    .summary-right {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+        margin-left: auto;
     }
     .chip {
         padding: 2px 8px;
         border-radius: 999px;
         font-size: 12px;
-        border: 1px solid rgba(148, 163, 184, 0.5);
+        border: 1px solid rgba(148, 163, 184, 0.6);
         white-space: nowrap;
     }
     .chip-hot { border-color: #fb7185; }
     .chip-view { border-color: #60a5fa; }
     .chip-eng { border-color: #34d399; }
 
-    /* 영상 크기 */
-    .video-wrapper iframe {
-        width: 100%;
-        height: 260px;
-        border-radius: 12px;
+    .summary-link {
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        text-decoration: none;
+        border: 1px solid rgba(59, 130, 246, 0.9);
+        background: rgba(37, 99, 235, 0.2);
+        color: #BFDBFE;
+        white-space: nowrap;
+    }
+    .summary-link:hover {
+        background: rgba(59, 130, 246, 0.4);
     }
 
     /* 모바일 대응 */
     @media (max-width: 900px) {
-        .summary-bar { font-size: 11px; padding: 6px 10px; }
-        .video-wrapper iframe { height: 200px; }
+        .summary-bar { font-size: 11px; padding: 6px 8px; }
+        .summary-right { margin-left: 0; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -112,7 +140,7 @@ if "selected_index" not in st.session_state:
 api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
 # -------------------------------------------------------------------------
-# 상단 50:50 레이아웃 (PREVIEW 좌 / SEARCH 우)
+# 상단 50:50 레이아웃 (좌: 요약바, 우: 검색)
 # -------------------------------------------------------------------------
 preview_col, search_col = st.columns(2)
 
@@ -398,11 +426,9 @@ if "search_trigger" in locals() and search_trigger:
             st.error(f"에러 발생: {e}")
 
 # -------------------------------------------------------------------------
-# ▶ PREVIEW (좌측)
+# ▶ 왼쪽: 요약바만 표시
 # -------------------------------------------------------------------------
 with preview_col:
-    st.markdown("#### 🎬 PREVIEW")
-
     df = st.session_state.df_result
     selected_row = None
 
@@ -411,7 +437,7 @@ with preview_col:
             selected_row = df.iloc[st.session_state.selected_index]
 
     if selected_row is None:
-        st.info("표에서 영상을 선택하면 여기에 미리보기가 표시됩니다.")
+        st.info("표에서 영상을 선택하면 왼쪽에 요약 정보가 표시됩니다.")
     else:
         # 제목
         st.markdown(
@@ -423,52 +449,31 @@ with preview_col:
             unsafe_allow_html=True,
         )
 
-        # 요약 바
+        # 요약 바 + 유튜브 링크 버튼
         channel_name = selected_row["채널명"]
         total_videos = selected_row["총 영상 수"]
         published = selected_row["게시일"]
         perf_str = f"{selected_row['raw_perf']:,.0f}%"
         views_str = f"{selected_row['raw_view']:,}"
         eng_str = f"{float(selected_row['raw_engagement']):.2f}%"
+        url = selected_row["이동"]
 
         summary_html = f"""
         <div class="summary-bar">
-            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+            <div class="summary-left">
                 <span>📺 <b>{channel_name}</b></span>
                 <span>· 총 {total_videos}</span>
                 <span>· 📅 {published}</span>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-left:auto;">
+            <div class="summary-right">
                 <span class="chip chip-hot">🔥 {perf_str}</span>
                 <span class="chip chip-view">👁 {views_str}</span>
                 <span class="chip chip-eng">💬 {eng_str}</span>
+                <a class="summary-link" href="{url}" target="_blank">🔗 유튜브에서 보기</a>
             </div>
         </div>
         """
         st.markdown(summary_html, unsafe_allow_html=True)
-
-        # 영상 (축소)
-        youtube_embed = f"https://www.youtube.com/embed/{selected_row['ID']}"
-        st.markdown(
-            f"""
-            <div class="video-wrapper">
-                <iframe
-                    src="{youtube_embed}"
-                    frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen>
-                </iframe>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.link_button(
-            "🔗 유튜브에서 보기",
-            selected_row["이동"],
-            type="primary",
-            use_container_width=True,
-        )
 
 # -------------------------------------------------------------------------
 # ▶ 테이블 (전체 리스트)
@@ -482,7 +487,7 @@ if df is None or df.empty:
     st.info("검색 결과가 없습니다.")
 else:
     # 좋아요 컬럼 추가 (raw_like → 좋아요)
-    if "좋아요" not in df.columns:
+    if "좋아요" not in df.columns and "raw_like" in df.columns:
         df["좋아요"] = df["raw_like"].apply(lambda x: f"{int(x):,}")
 
     max_perf = df["raw_perf"].max() if len(df) > 0 else 1000
