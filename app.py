@@ -6,7 +6,6 @@ import pandas as pd
 
 # ==========================================
 # 🔐 API 키는 Streamlit Cloud의 'Secrets'에서 가져옵니다.
-# 로컬에서 테스트할 때는 왼쪽 사이드바에 직접 입력하세요.
 # ==========================================
 
 st.set_page_config(page_title="SIGNAL - YouTube Insight", layout="wide", page_icon="📡")
@@ -14,29 +13,41 @@ st.set_page_config(page_title="SIGNAL - YouTube Insight", layout="wide", page_ic
 # 🌑 [스타일링]
 st.markdown("""
 <style>
+    /* 전체 테마 */
     .stApp { background-color: #0E1117; color: #FAFAFA; }
+    
+    /* ⭐ [핵심 1] 사이드바 너비 강제 확장 (500px) */
+    section[data-testid="stSidebar"] {
+        width: 500px !important; #default-width is usually narrower
+    }
+    
+    /* 사이드바 배경색 */
     [data-testid="stSidebar"] { background-color: #212529; border-right: 1px solid #333; }
+    
+    /* 테이블 헤더 */
     th { background-color: #1E3A8A !important; color: white !important; text-align: center !important; }
+    
+    /* 테이블 셀 정렬 */
     td { vertical-align: middle !important; text-align: center !important; }
+    
+    /* 링크 스타일 */
     a { text-decoration: none; color: #4FC3F7; font-weight: bold; }
     a:hover { color: #FFFF00; text-decoration: underline; }
-    [data-testid="stForm"] { border: 1px solid #444; padding: 20px; border-radius: 10px; background-color: #1a1c24; }
+    
+    /* 썸네일 이미지 */
+    img { border-radius: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("📡 SIGNAL : YouTube Hunter")
 
 # 1. 상단 (Top) 검색창
-api_key = st.secrets.get("YOUTUBE_API_KEY", None) # 클라우드에선 여기서 키를 가져옴
+api_key = st.secrets.get("YOUTUBE_API_KEY", None)
 
 with st.expander("🔎 검색 옵션 (펼치기)", expanded=True):
     with st.form(key='search_form'):
-        # API 키가 없으면 입력창 보여주기
         if not api_key:
-            col_key, _ = st.columns([1, 3])
-            with col_key:
-                manual_key = st.text_input("API 키 입력", type="password")
-                if manual_key: api_key = manual_key
+            api_key = st.text_input("API 키 입력 (로컬 테스트용)", type="password")
 
         c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
         with c1: query = st.text_input("검색어 (엔터!)", "삶의질 상승템")
@@ -106,27 +117,32 @@ if search_trigger and api_key:
                     if grade not in filter_grade: continue
 
                     raw_date = datetime.strptime(item['snippet']['publishedAt'][:10], "%Y-%m-%d")
+                    
+                    # ⭐ [핵심 2] 제목에서 링크 제거 (클릭 선택을 위해) -> 링크는 맨 끝 버튼으로 이동
                     data_list.append({
                         "raw_perf": perf, "raw_date": raw_date,
-                        "썸네일": thumb, "제목": item['snippet']['title'], "채널명": item['snippet']['channelTitle'],
+                        "썸네일": thumb, 
+                        "제목": item['snippet']['title'], # 순수 텍스트
+                        "채널명": item['snippet']['channelTitle'],
                         "게시일": raw_date.strftime("%Y/%m/%d"), "구독자": sub_count, "조회수": view_count,
                         "성과도": perf, "등급": grade, "길이": parse_duration(item['contentDetails']['duration']),
                         "댓글": int(item['statistics'].get('commentCount', 0)),
                         "좋아요": int(item['statistics'].get('likeCount', 0)),
                         "참여율": (int(item['statistics'].get('commentCount', 0)) / view_count * 100) if view_count else 0,
+                        "이동": f"https://www.youtube.com/watch?v={vid}", # 이동 버튼용 링크
                         "ID": vid
                     })
                 
-                # 정렬: 성과도 > 최신순
                 sorted_list = sorted(data_list, key=lambda x: (x['raw_perf'], x['raw_date']), reverse=True)
                 for i, row in enumerate(sorted_list): row['No'] = i + 1
                 st.session_state.df_result = pd.DataFrame(sorted_list)
     except Exception as e: st.error(f"에러: {e}")
 
 # 3. 화면 출력
+# ⭐ 왼쪽 사이드바 (넓어진 상태)
 with st.sidebar:
     st.header("🎞️ SIGNAL PREVIEW")
-    st.info("리스트에서 행을 클릭하세요.")
+    st.info("리스트의 '제목'이나 '행'을 클릭하세요.")
     preview_container = st.container()
 
 if st.session_state.df_result is not None:
@@ -138,9 +154,10 @@ if st.session_state.df_result is not None:
         column_order=("No", "썸네일", "채널명", "제목", "게시일", "구독자", "조회수", "성과도", "등급", "길이", "댓글", "좋아요", "참여율", "이동"),
         column_config={
             "No": st.column_config.NumberColumn("No", width=50),
-            "썸네일": st.column_config.ImageColumn("썸네일", width=80),
+            "썸네일": st.column_config.ImageColumn("썸네일", width=120),
             "채널명": st.column_config.TextColumn("채널명", width=120),
-            "제목": st.column_config.TextColumn("제목", width=350),
+            # ⭐ 제목을 LinkColumn이 아니라 TextColumn으로 변경 (클릭 선택 가능하게)
+            "제목": st.column_config.TextColumn("제목", width=350), 
             "게시일": st.column_config.TextColumn("게시일", width=100),
             "구독자": st.column_config.NumberColumn("구독자", format="%d", width=100),
             "조회수": st.column_config.NumberColumn("조회수", format="%d", width=100),
@@ -150,10 +167,12 @@ if st.session_state.df_result is not None:
             "댓글": st.column_config.NumberColumn("댓글", format="%d", width=80),
             "좋아요": st.column_config.NumberColumn("좋아요", format="%d", width=80),
             "참여율": st.column_config.NumberColumn("참여율", format="%.2f%%", width=80),
+            # ⭐ 이동 버튼은 여기에만 존재
             "이동": st.column_config.LinkColumn("이동", display_text="▶", width=60),
             "ID": None, "raw_perf": None, "raw_date": None
         },
-        hide_index=True, use_container_width=False, height=800, on_select="rerun", selection_mode="single-row"
+        hide_index=True, use_container_width=False, height=1000, 
+        on_select="rerun", selection_mode="single-row"
     )
 
     if selection.selection.rows:
@@ -167,4 +186,6 @@ if st.session_state.df_result is not None:
             st.divider()
             if "초대박" in row['등급']: st.success("🔥 강력한 떡상 신호!")
             st.markdown(f"**채널:** {row['채널명']}")
-            st.link_button("📺 영상 보러가기", f"https://www.youtube.com/watch?v={row['ID']}", type="primary")
+            
+            # 사이드바에도 큼지막한 이동 버튼
+            st.link_button("📺 유튜브에서 보기", f"https://www.youtube.com/watch?v={row['ID']}", type="primary", use_container_width=True)
